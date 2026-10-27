@@ -47,7 +47,7 @@ for (let r = Math.max(2, next - 12); r <= next; r++) {
 
 const out = {
   about: '로또 선생 — 각 회차 번호는 그 회차 추첨 전까지의 데이터만으로, 선생·회차로 고정된 난수 씨앗을 써서 만듭니다. 한번 저장된 번호는 바뀌지 않습니다.',
-  teachers: T.TEACHERS.map(({ id, name, hanja, color, strategy, style, desc }) => ({ id, name, hanja, color, strategy, style, desc })),
+  teachers: T.TEACHERS.map(({ id, name, photo, color, strategy }) => ({ id, name, photo, color, strategy })),
   latest_draw: latest,
   next_round: next,
   next_date: (() => { const [y, m, d] = draws[latest - 1].date.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + 7)).toISOString().slice(0, 10); })(),

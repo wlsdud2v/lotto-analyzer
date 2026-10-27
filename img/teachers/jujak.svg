@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%"><stop offset="0" stop-color="#ffb26b"/><stop offset="1" stop-color="#b8261a"/></radialGradient>
+    <linearGradient id="robe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2452d"/><stop offset="1" stop-color="#93190f"/></linearGradient>
+    <clipPath id="c"><circle cx="100" cy="100" r="100"/></clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="200" height="200" fill="url(#bg)"/>
+    <g fill="#ffe2a8" opacity=".35"><path d="M20 150c8-20 2-34-4-44 14 8 22 22 18 40z"/><path d="M178 146c-6-18 0-32 6-42-14 8-20 22-16 38z"/></g>
+    <!-- 어깨 -->
+    <path d="M12 212c6-46 40-64 88-64s82 18 88 64z" fill="url(#robe)"/>
+    <path d="M74 150l26 44 26-44" fill="#fff3df"/>
+    <path d="M68 150l32 50 32-50" fill="none" stroke="#ffc94a" stroke-width="5"/>
+    <g fill="#ffc94a" opacity=".7"><path d="M36 182c4-8 10-10 14-8-6 2-8 6-8 12z"/><path d="M164 182c-4-8-10-10-14-8 6 2 8 6 8 12z"/></g>
+    <!-- 뒷머리 -->
+    <path d="M58 96c-4-36 16-56 42-56s46 20 42 56c-2 26-10 38-14 44H72c-4-6-12-18-14-44z" fill="#2a1712"/>
+    <!-- 목 -->
+    <rect x="89" y="122" width="22" height="28" rx="6" fill="#f0c19d"/>
+    <!-- 얼굴 -->
+    <ellipse cx="100" cy="94" rx="33" ry="40" fill="#f8d2b0"/>
+    <!-- 앞머리 + 쪽머리 -->
+    <path d="M66 86c4-26 20-38 34-38s32 12 34 38c-10-14-24-20-34-20s-26 6-34 20z" fill="#2a1712"/>
+    <circle cx="100" cy="38" r="15" fill="#2a1712"/>
+    <!-- 봉황 깃털 장식 -->
+    <path d="M110 30c14-18 34-22 46-18-12 2-22 10-28 20 10-6 24-6 32 0-14-1-26 4-34 12z" fill="#ff5a2a"/>
+    <path d="M112 32c10-10 24-14 34-12" stroke="#ffd23f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <circle cx="112" cy="34" r="5" fill="#ffd23f"/>
+    <!-- 눈썹, 자신만만한 눈 -->
+    <path d="M76 80c6-4 12-4 17-1M107 79c5-3 11-3 17 1" stroke="#2a1712" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M77 92c4-5 12-5 16 0" stroke="#2a1712" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M107 92c4-5 12-5 16 0" stroke="#2a1712" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <ellipse cx="85" cy="94" rx="4" ry="4.5" fill="#2a1712"/><ellipse cx="115" cy="94" rx="4" ry="4.5" fill="#2a1712"/>
+    <circle cx="86.5" cy="92.5" r="1.5" fill="#fff"/><circle cx="116.5" cy="92.5" r="1.5" fill="#fff"/>
+    <path d="M100 98c-2 6-2 9 1 10" stroke="#d39a76" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <!-- 미소 -->
+    <path d="M88 114c6 6 18 6 24-2" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <circle cx="76" cy="106" r="6" fill="#ff8a7a" opacity=".4"/><circle cx="124" cy="106" r="6" fill="#ff8a7a" opacity=".4"/>
+  </g>
+</svg>

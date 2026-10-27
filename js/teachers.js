@@ -12,13 +12,13 @@
 (function (root) {
 
   const TEACHERS = [
-    { id: 'cheongryong', name: '청룡 선생', hanja: '龍', color: '#1d8a7a', strategy: 'balanced', style: '균형형',
+    { id: 'cheongryong', photo: 'img/teachers/cheongryong.svg', name: '청룡 선생', hanja: '龍', color: '#1d8a7a', strategy: 'balanced', style: '균형형',
       desc: '빈도·최근 흐름·미출현 기간을 고루 따지고, 합계·홀짝·고저 균형까지 맞춥니다.' },
-    { id: 'baekho', name: '백호 선생', hanja: '虎', color: '#7d8590', strategy: 'random', style: '완전 랜덤',
+    { id: 'baekho', photo: 'img/teachers/baekho.svg', name: '백호 선생', hanja: '虎', color: '#7d8590', strategy: 'random', style: '완전 랜덤',
       desc: '통계는 믿지 않습니다. 오직 순수한 운으로 뽑습니다.' },
-    { id: 'jujak', name: '주작 선생', hanja: '雀', color: '#d2402a', strategy: 'hot', style: '핫 넘버',
+    { id: 'jujak', photo: 'img/teachers/jujak.svg', name: '주작 선생', hanja: '雀', color: '#d2402a', strategy: 'hot', style: '핫 넘버',
       desc: '요즘 잘 나오는 번호의 기세에 올라탑니다.' },
-    { id: 'geobuk', name: '거북 선생', hanja: '龜', color: '#34495e', strategy: 'cold', style: '콜드 넘버',
+    { id: 'geobuk', photo: 'img/teachers/geobuk.svg', name: '거북 선생', hanja: '龜', color: '#34495e', strategy: 'cold', style: '콜드 넘버',
       desc: '오래 쉬고 있는 번호가 돌아올 때를 끈기 있게 기다립니다.' },
   ];
 

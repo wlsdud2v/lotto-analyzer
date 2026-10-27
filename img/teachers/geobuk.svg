@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%"><stop offset="0" stop-color="#7d97a8"/><stop offset="1" stop-color="#22313d"/></radialGradient>
+    <linearGradient id="robe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f5a4c"/><stop offset="1" stop-color="#1f3229"/></linearGradient>
+    <pattern id="hex" width="20" height="17.3" patternUnits="userSpaceOnUse"><path d="M5 0h10l5 8.66-5 8.66H5L0 8.66z" fill="none" stroke="#9cc5a8" stroke-opacity=".45" stroke-width="1.5"/></pattern>
+    <clipPath id="c"><circle cx="100" cy="100" r="100"/></clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="200" height="200" fill="url(#bg)"/>
+    <g stroke="#d6e4ec" stroke-opacity=".2" stroke-width="3" fill="none" stroke-linecap="round"><path d="M14 60c12-6 24 6 36 0s24-6 36 0"/><path d="M120 34c12-6 24 6 36 0s20-4 30 2"/></g>
+    <!-- 어깨: 거북 등껍질 무늬 -->
+    <path d="M10 212c6-46 40-64 90-64s84 18 90 64z" fill="url(#robe)"/>
+    <path d="M10 212c6-46 40-64 90-64s84 18 90 64z" fill="url(#hex)"/>
+    <path d="M76 150l24 40 24-40" fill="#efe9da"/>
+    <!-- 목 -->
+    <rect x="88" y="124" width="24" height="26" rx="6" fill="#d9a983"/>
+    <!-- 귀·얼굴 (주름) -->
+    <ellipse cx="61" cy="98" rx="8" ry="12" fill="#d8a47d"/><ellipse cx="139" cy="98" rx="8" ry="12" fill="#d8a47d"/>
+    <ellipse cx="100" cy="94" rx="37" ry="43" fill="#e6b994"/>
+    <!-- 둥근 모자 (껍질 무늬) -->
+    <path d="M60 80c0-28 18-42 40-42s40 14 40 42c-10-6-24-9-40-9s-30 3-40 9z" fill="#2f4a3c"/>
+    <path d="M60 80c0-28 18-42 40-42s40 14 40 42c-10-6-24-9-40-9s-30 3-40 9z" fill="url(#hex)"/>
+    <path d="M60 80c10-6 24-9 40-9s30 3 40 9" stroke="#9cc5a8" stroke-width="3" fill="none"/>
+    <!-- 이마 주름, 늘어진 눈썹 -->
+    <path d="M84 78c10-2 22-2 32 0" stroke="#c99a76" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M72 88c6-3 14-2 18 2M110 90c4-4 12-5 18-2" stroke="#e9e9e4" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- 둥근 안경 + 졸린 눈 -->
+    <circle cx="83" cy="99" r="11" fill="#ffffff" fill-opacity=".18" stroke="#3a2a1e" stroke-width="3"/>
+    <circle cx="117" cy="99" r="11" fill="#ffffff" fill-opacity=".18" stroke="#3a2a1e" stroke-width="3"/>
+    <path d="M94 99h12" stroke="#3a2a1e" stroke-width="3"/>
+    <path d="M77 100c4 2 8 2 12 0M111 100c4 2 8 2 12 0" stroke="#3a2a1e" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M100 104c-3 7-3 10 1 11" stroke="#b9875f" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <!-- 가는 팔자 콧수염 + 턱수염 -->
+    <path d="M100 118c-8-2-16 2-26 14M100 118c8-2 16 2 26 14" stroke="#e9e9e4" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M92 126c4 3 12 3 16 0" stroke="#8a5a3c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M94 132c2 10 4 16 6 22 2-6 4-12 6-22z" fill="#e9e9e4"/>
+    <circle cx="74" cy="112" r="6" fill="#d98a72" opacity=".3"/><circle cx="126" cy="112" r="6" fill="#d98a72" opacity=".3"/>
+  </g>
+</svg>

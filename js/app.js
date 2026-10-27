@@ -407,8 +407,8 @@
       const share = window.AndroidBridge ? `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : '';
       return `<div class="tc-card ${st.rate === bestRate ? 'best' : ''}" style="--tc:${t.color}">
         <div class="tc-top">
-          <div class="tc-ava" aria-hidden="true">${t.hanja}</div>
-          <div class="tc-name"><b>${t.name}</b><span class="tc-style">${t.style}</span></div>
+          <img class="tc-ava" src="${t.photo}" alt="${t.name}" width="64" height="64">
+          <div class="tc-name"><b>${t.name}</b></div>
           <div class="tc-stars" title="이번 주 스스로 본 운세">${stars}<small>이번 주 운세</small></div>
         </div>
         <div class="tc-bubble">${f.text}</div>
@@ -433,7 +433,7 @@
         <th>5등</th><th>4등</th><th>3등</th><th>2등</th><th>1등</th><th class="l">최고 성적</th></tr></thead><tbody>` +
       rows.map((x, i) => `<tr>
         <td class="l">${i + 1}</td>
-        <td class="l"><span class="tc-who" style="--tc:${x.t.color}"><span class="tc-dot">${x.t.hanja}</span>${x.t.name}</span></td>
+        <td class="l"><span class="tc-who"><img class="tc-dot" src="${x.t.photo}" alt="">${x.t.name}</span></td>
         <td>${fmt(x.st.n)}</td><td>${x.st.avg.toFixed(3)}</td><td><b>${(x.st.rate * 100).toFixed(2)}%</b></td>
         ${[5, 4, 3, 2, 1].map(k => `<td>${x.st.ranks[k] || '-'}</td>`).join('')}
         <td class="l">${x.st.best ? `${x.st.best.no}회 ${RANK_NAME[x.st.best.rank]}` : '-'}</td></tr>`).join('') + '</tbody>';
@@ -444,7 +444,7 @@
     const draws = state.allDraws, picks = state.tc.data.picks;
     const n = Math.min(state.tc.histN, draws.length);
     const T = LottoTeachers.TEACHERS;
-    let html = `<thead><tr><th class="l">회차</th><th class="l">당첨 번호</th>${T.map(t => `<th class="l"><span class="tc-who" style="--tc:${t.color}"><span class="tc-dot">${t.hanja}</span>${t.name.replace(' 선생', '')}</span></th>`).join('')}</tr></thead><tbody>`;
+    let html = `<thead><tr><th class="l">회차</th><th class="l">당첨 번호</th>${T.map(t => `<th class="l"><span class="tc-who"><img class="tc-dot" src="${t.photo}" alt="">${t.name.replace(' 선생', '')}</span></th>`).join('')}</tr></thead><tbody>`;
     for (let i = draws.length - 1; i >= draws.length - n; i--) {
       const d = draws[i];
       html += `<tr><td class="l">${d.no}회</td><td class="l"><div class="balls">${d.nums.map(x => ball(x, 'sm')).join('')}</div></td>`;

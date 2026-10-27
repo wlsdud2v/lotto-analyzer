@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%"><stop offset="0" stop-color="#c9cfd8"/><stop offset="1" stop-color="#5b6370"/></radialGradient>
+    <clipPath id="c"><circle cx="100" cy="100" r="100"/></clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="200" height="200" fill="url(#bg)"/>
+    <g stroke="#ffffff" stroke-opacity=".18" stroke-width="10" stroke-linecap="round"><path d="M-10 40l40 20M170 30l40 18M-10 150l36 14M178 140l30 12"/></g>
+    <!-- 어깨: 호랑이 줄무늬 조끼 -->
+    <path d="M8 212c6-48 42-66 92-66s86 18 92 66z" fill="#eef0f3"/>
+    <g fill="#2b2f36"><path d="M28 170l26 6-24 6z"/><path d="M22 192l30 4-28 8z"/><path d="M172 170l-26 6 24 6z"/><path d="M178 192l-30 4 28 8z"/><path d="M44 156l20 8-20 4z"/><path d="M156 156l-20 8 20 4z"/></g>
+    <path d="M78 148l22 34 22-34" fill="#3b4250"/>
+    <!-- 목 -->
+    <rect x="87" y="122" width="26" height="28" rx="6" fill="#dca37a"/>
+    <!-- 귀·얼굴 -->
+    <ellipse cx="60" cy="98" rx="8" ry="11" fill="#d99f76"/><ellipse cx="140" cy="98" rx="8" ry="11" fill="#d99f76"/>
+    <path d="M62 92c0-30 16-46 38-46s38 16 38 46c0 30-16 46-38 46s-38-16-38-46z" fill="#e8b48a"/>
+    <!-- 덥수룩한 흰머리 + 검은 줄 -->
+    <path d="M56 92c-6-24 4-50 24-58l-2 10 12-16 2 12 12-14 4 14 12-10-2 14c20 8 28 30 22 48-4-12-12-22-22-26-14 6-38 6-52 0-8 6-12 14-14 26z" fill="#f7f7f5"/>
+    <g fill="#2b2f36"><path d="M84 44l6 14-10-8z"/><path d="M110 40l2 16-8-10z"/><path d="M124 52l-2 14 8-8z"/><path d="M68 62l10 8-12-2z"/><path d="M132 70l-8 6 12-1z"/></g>
+    <!-- 굵은 눈썹, 장난스러운 눈 -->
+    <path d="M72 80l20-4M108 76l20 4" stroke="#2b2f36" stroke-width="6" stroke-linecap="round"/>
+    <ellipse cx="83" cy="92" rx="5" ry="6" fill="#2b2f36"/><ellipse cx="117" cy="92" rx="5" ry="6" fill="#2b2f36"/>
+    <circle cx="85" cy="90" r="1.8" fill="#fff"/><circle cx="119" cy="90" r="1.8" fill="#fff"/>
+    <path d="M100 96c-4 8-4 12 1 13" stroke="#b57a52" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <!-- 함박웃음 -->
+    <path d="M80 112c8 14 32 14 40 0z" fill="#7a2e22"/>
+    <path d="M83 113h34l-2 5H85z" fill="#ffffff"/>
+    <!-- 수염 자국 -->
+    <g fill="#9a8a80" opacity=".5"><circle cx="78" cy="122" r="1.2"/><circle cx="84" cy="127" r="1.2"/><circle cx="92" cy="130" r="1.2"/><circle cx="100" cy="131" r="1.2"/><circle cx="108" cy="130" r="1.2"/><circle cx="116" cy="127" r="1.2"/><circle cx="122" cy="122" r="1.2"/></g>
+    <circle cx="74" cy="104" r="6" fill="#e9877a" opacity=".3"/><circle cx="126" cy="104" r="6" fill="#e9877a" opacity=".3"/>
+  </g>
+</svg>
