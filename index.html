@@ -60,6 +60,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="recommend" role="tab">번호 추천</button>
       <button class="tab" data-tab="tarot" role="tab">타로 추천</button>
+      <button class="tab" data-tab="machine" role="tab">추첨기</button>
       <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
       <button class="tab" data-tab="check" role="tab">내 번호 확인</button>
     </nav>
@@ -163,6 +164,43 @@
       </div>
     </section>
 
+    <!-- ───────────── 물리 추첨기 ───────────── -->
+    <section class="panel" id="tab-machine">
+      <div class="machine-layout">
+        <div class="card machine-stage">
+          <div class="drum-wrap"><canvas id="drumCanvas" role="img" aria-label="공기 혼합식 로또 추첨기 애니메이션"></canvas></div>
+          <div class="machine-status" id="machineStatus">추첨 시작을 누르면 송풍기가 켜집니다</div>
+          <div class="tray" id="tray"></div>
+          <p class="hint" id="trayHint">나온 순서대로 놓입니다</p>
+        </div>
+
+        <div class="machine-side">
+          <div class="card">
+            <h2>물리 추첨기</h2>
+            <p class="hint">실제 로또와 같은 <b>공기 혼합식</b> 추첨기를 물리 시뮬레이션으로 재현했습니다. 45개의 공이 바닥에서 솟구치는 바람에 섞이다가, 위쪽 배출구로 빨려 올라간 순서대로 당첨 번호 6개와 보너스 번호가 정해집니다.</p>
+            <div class="machine-ctrl">
+              <span class="lbl">바람 세기</span>
+              <div class="seg" id="airSel"><button data-v="1">약</button><button data-v="2" class="active">보통</button><button data-v="3">강</button></div>
+            </div>
+            <div class="machine-ctrl">
+              <span class="lbl">진행 속도</span>
+              <div class="seg" id="speedSel"><button data-v="1" class="active">실제 속도</button><button data-v="3">3배 빠르게</button></div>
+            </div>
+            <button class="btn primary big" id="drawBtn">추첨 시작</button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>이번 추첨 기록</h2>
+          <span class="hint">번호는 작은 순으로 정렬해 보여 줍니다 · 보너스 제외</span>
+        </div>
+        <div id="machineHistory" class="set-list"><p class="empty">아직 추첨하지 않았습니다.</p></div>
+      </div>
+    </section>
+
     <!-- ───────────── 번호별 확률 ───────────── -->
     <section class="panel" id="tab-stats">
       <div class="kpis" id="kpis"></div>
@@ -225,6 +263,7 @@
   <script src="js/engine.js"></script>
   <script src="js/update.js"></script>
   <script src="js/tarot.js"></script>
+  <script src="js/drum.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

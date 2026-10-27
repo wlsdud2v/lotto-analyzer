@@ -334,3 +334,33 @@ input.num { width: 64px; text-align: center; }
 @media (prefers-reduced-motion: reduce) {
   .tcard .inner, .deck .dcard { transition: none; animation: none; }
 }
+
+/* ───────── 물리 추첨기 ───────── */
+.machine-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+.machine-stage { display: flex; flex-direction: column; align-items: center; }
+.drum-wrap { width: 100%; display: flex; justify-content: center; }
+.drum-wrap canvas { display: block; max-width: 100%; }
+.machine-status { margin-top: 10px; font-size: 14px; font-weight: 700; color: var(--muted); text-align: center; min-height: 22px; }
+.machine-status.live { color: var(--accent); }
+.machine-side .card + .card { margin-top: 16px; }
+.machine-ctrl { display: flex; align-items: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+.machine-ctrl .lbl { font-size: 14px; font-weight: 500; width: 72px; }
+.machine-ctrl .seg button.active { background: var(--accent); }
+
+.tray { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; min-height: 46px; margin-top: 12px; width: 100%; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.tray .slot-b { width: 38px; height: 38px; border-radius: 50%; border: 2px dashed var(--line); flex: none; }
+.tray .ball { animation: drop .45s cubic-bezier(.3,1.4,.5,1) both; }
+.tray .plus { margin: 0 2px; }
+.tray .bonus-lbl { font-size: 11px; color: var(--muted); margin-left: 2px; }
+#trayHint { margin: 8px 0 0; text-align: center; }
+@keyframes drop { from { transform: translate(18px, -26px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (max-width: 900px) {
+  .machine-layout { grid-template-columns: 1fr; }
+  .machine-side { order: -1; }
+  .machine-side .hint { display: none; }
+}
+@media (max-width: 520px) {
+  .tray { gap: 5px; padding: 8px; }
+  .tray .slot-b { width: 32px; height: 32px; }
+}

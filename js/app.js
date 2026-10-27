@@ -21,6 +21,7 @@
     checkSel: [],
     sort: { key: 'n', asc: true },
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
+    machine: { m: null, history: [], drawn: [] },
   };
 
   const MAX_FIX = 5;
@@ -251,7 +252,7 @@
         <span class="idx">${String.fromCharCode(65 + i)}</span>
         <div class="balls">${item.nums.map(n => ball(n, fixed.has(n) ? 'fixed' : '')).join('')}</div>
         <div class="acts">${actions}</div>
-        <div class="meta">${setMeta(item.nums)}${item.relaxed ? '<span class="warn">필터 조건을 모두 만족하는 조합을 찾지 못해 일부 필터를 완화했습니다</span>' : ''}${item.at ? `<span>${item.at} 저장</span>` : ''}</div>
+        <div class="meta">${setMeta(item.nums)}${item.relaxed ? '<span class="warn">필터 조건을 모두 만족하는 조합을 찾지 못해 일부 필터를 완화했습니다</span>' : ''}${item.bonus ? `<span>보너스 <b>${item.bonus}</b></span><span>나온 순서 ${item.order.join(' → ')}</span>` : ''}${item.at ? `<span>${item.at} 저장</span>` : ''}</div>
       </div>`;
   }
 
@@ -266,6 +267,90 @@
     const el = $('#results');
     if (!state.results.length) { el.innerHTML = '<p class="empty">설정을 고른 뒤 <b>추천 번호 생성</b>을 누르세요.</p>'; return; }
     el.innerHTML = state.results.map((r, i) => setRow(r, i, setActions(i))).join('');
+  }
+
+
+  // ───────────────────────── 물리 추첨기 ─────────────────────────
+
+  const ORDINAL = ['첫 번째', '두 번째', '세 번째', '네 번째', '다섯 번째', '여섯 번째', '보너스'];
+
+
+  function renderTray() {
+    const d = state.machine.drawn;
+    const cell = i => (d[i] != null ? ball(d[i]) : '<span class="slot-b"></span>');
+    $('#tray').innerHTML = [0, 1, 2, 3, 4, 5].map(cell).join('') + '<span class="plus">+</span>' + cell(6);
+  }
+
+
+  function setMachineStatus(text, live) {
+    const el = $('#machineStatus');
+    el.textContent = text;
+    el.classList.toggle('live', !!live);
+  }
+
+
+  function renderMachineHistory() {
+    const h = state.machine.history;
+    $('#machineHistory').innerHTML = h.length
+      ? h.map((x, i) => setRow(x, i, setActions(i))).join('')
+      : '<p class="empty">아직 추첨하지 않았습니다.</p>';
+  }
+
+
+  function initMachine() {
+    const canvas = $('#drumCanvas');
+    if (!canvas || typeof LottoDrum === 'undefined') return;
+    const mc = state.machine;
+    mc.m = new LottoDrum.LottoMachine(canvas, {
+      onPhase: p => {
+        const k = mc.drawn.length;
+        if (p === 'mix') setMachineStatus(k ? `공을 다시 섞는 중… (${ORDINAL[k]} 공 준비)` : '송풍기 가동 — 공을 섞는 중…', true);
+        if (p === 'capture') setMachineStatus(`배출구 열림 — ${ORDINAL[k]} 공을 뽑습니다`, true);
+      },
+      onCapture: (n, i) => setMachineStatus(`${ORDINAL[i]} 공이 관을 타고 나옵니다…`, true),
+      onBall: (n, i) => {
+        mc.drawn[i] = n;
+        renderTray();
+        setMachineStatus(i === 6 ? `보너스 번호 ${n}` : `${ORDINAL[i]} 번호 ${n}`, true);
+      },
+      onDone: drawn => {
+        const main = drawn.slice(0, 6).sort((a, b) => a - b);
+        mc.history.unshift({ nums: main, bonus: drawn[6], order: drawn.slice(0, 6), fixed: [] });
+        mc.history.length = Math.min(mc.history.length, 20);
+        renderMachineHistory();
+        setMachineStatus(`추첨 완료 — ${main.join(', ')} + 보너스 ${drawn[6]}`, false);
+        $('#drawBtn').disabled = false;
+        $('#drawBtn').textContent = '다시 추첨';
+        $('#trayHint').textContent = '나온 순서대로 놓였습니다. 아래 기록에서 정렬된 번호를 저장할 수 있어요';
+      },
+    });
+    renderTray();
+
+    $('#drawBtn').addEventListener('click', () => {
+      if (mc.m.running) return;
+      mc.drawn = [];
+      renderTray();
+      $('#trayHint').textContent = '나온 순서대로 놓입니다';
+      $('#drawBtn').disabled = true;
+      $('#drawBtn').textContent = '추첨 중…';
+      mc.m.start();
+      // 모바일: 추첨기가 화면 밖이면 보이도록 스크롤
+      const stage = document.querySelector('.machine-stage');
+      const rect = stage.getBoundingClientRect();
+      if (rect.top < 0 || rect.bottom > window.innerHeight) stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    $('#airSel').addEventListener('click', e => {
+      const b = e.target.closest('button[data-v]');
+      if (!b) return;
+      $$('#airSel button').forEach(x => x.classList.toggle('active', x === b));
+      mc.m.setAirLevel(+b.dataset.v);
+    });
+    $('#speedSel').addEventListener('click', e => {
+      const b = e.target.closest('button[data-v]');
+      if (!b) return;
+      $$('#speedSel button').forEach(x => x.classList.toggle('active', x === b));
+      mc.m.setSpeed(+b.dataset.v);
+    });
   }
 
 
@@ -576,9 +661,11 @@
   // ───────────────────────── 이벤트 ─────────────────────────
 
   function bind() {
+    initMachine();
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       $$('.tab').forEach(x => x.classList.toggle('active', x === t));
       $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t.dataset.tab));
+      if (state.machine.m) state.machine.m.setVisible(t.dataset.tab === 'machine');
       try { localStorage.setItem('lotto.tab', t.dataset.tab); } catch (e) { /* 무시 */ }
     }));
     try {
@@ -641,6 +728,7 @@
       if (b) onTarotPick(+b.dataset.i, b);
     });
     $('#tarotReroll').addEventListener('click', () => generateTarot(true));
+    $('#machineHistory').addEventListener('click', onSetAction(() => state.machine.history, () => '물리 추첨기 번호'));
 
     $('#saved').addEventListener('click', e => {
       const b = e.target.closest('button[data-act]');
