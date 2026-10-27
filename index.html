@@ -59,6 +59,7 @@
 
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="recommend" role="tab">번호 추천</button>
+      <button class="tab" data-tab="tarot" role="tab">타로 추천</button>
       <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
       <button class="tab" data-tab="check" role="tab">내 번호 확인</button>
     </nav>
@@ -123,6 +124,45 @@
       </div>
     </section>
 
+    <!-- ───────────── 타로 추천 ───────────── -->
+    <section class="panel" id="tab-tarot">
+      <div class="card tarot-table">
+        <div class="card-head">
+          <h2>타로 카드로 번호 뽑기</h2>
+          <span class="hint" id="tarotGuide">마음속으로 이번 주의 소망을 떠올리며 카드를 고르세요</span>
+        </div>
+        <div class="tarot-controls">
+          <div class="seg" id="spreadSel" role="group" aria-label="카드 수">
+            <button data-n="1">한 장 · 오늘의 카드</button>
+            <button data-n="3" class="active">세 장 · 과거·현재·미래</button>
+          </div>
+          <label>세트 수 <input type="number" id="tarotCount" class="num" value="3" min="1" max="10"></label>
+          <button class="btn ghost" id="shuffleBtn">카드 다시 섞기</button>
+        </div>
+        <div class="slots" id="tarotSlots"></div>
+        <div class="deck" id="tarotDeck"></div>
+      </div>
+
+      <div class="card" id="tarotReadingCard" hidden>
+        <h2>카드 해석</h2>
+        <div id="tarotReading" class="reading"></div>
+      </div>
+
+      <div class="card" id="tarotNumbersCard" hidden>
+        <div class="card-head">
+          <h2>카드가 고른 번호</h2>
+          <button class="btn ghost sm" id="tarotReroll">같은 카드로 다른 조합</button>
+        </div>
+        <div id="tarotSummary" class="hint"></div>
+        <div id="tarotResults" class="set-list"></div>
+        <p class="note">
+          정방향 카드의 수는 포함 번호, 역방향 카드의 수는 제외 번호가 되고, 카드의 기운에 따라 번호별 가중치가 정해집니다.
+          '번호 추천' 탭의 조합 필터도 함께 적용됩니다. 이번 주에 같은 카드를 뽑으면 같은 번호가 나옵니다.
+          재미로 즐겨 주세요 — 실제 당첨 확률은 어떤 번호든 같습니다.
+        </p>
+      </div>
+    </section>
+
     <!-- ───────────── 번호별 확률 ───────────── -->
     <section class="panel" id="tab-stats">
       <div class="kpis" id="kpis"></div>
@@ -184,6 +224,7 @@
   <script src="js/data.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/update.js"></script>
+  <script src="js/tarot.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

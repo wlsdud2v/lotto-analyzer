@@ -20,6 +20,7 @@
     results: [],
     checkSel: [],
     sort: { key: 'n', asc: true },
+    tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
   };
 
   const MAX_FIX = 5;
@@ -255,12 +256,163 @@
   }
 
 
+  function setActions(i) {
+    const share = window.AndroidBridge ? `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : '';
+    return `<button class="btn ghost sm" data-act="copy" data-i="${i}">복사</button>${share}<button class="btn ghost sm" data-act="save" data-i="${i}">저장</button>`;
+  }
+
+
   function renderResults() {
     const el = $('#results');
     if (!state.results.length) { el.innerHTML = '<p class="empty">설정을 고른 뒤 <b>추천 번호 생성</b>을 누르세요.</p>'; return; }
-    const share = window.AndroidBridge ? i => `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : () => '';
-    el.innerHTML = state.results.map((r, i) => setRow(r, i,
-      `<button class="btn ghost sm" data-act="copy" data-i="${i}">복사</button>${share(i)}<button class="btn ghost sm" data-act="save" data-i="${i}">저장</button>`)).join('');
+    el.innerHTML = state.results.map((r, i) => setRow(r, i, setActions(i))).join('');
+  }
+
+
+  // ───────────────────────── 타로 추천 ─────────────────────────
+
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+
+  function cardHTML(p, flipped) {
+    const c = p.card;
+    return `
+      <div class="tcard ${p.reversed ? 'rev' : ''} ${flipped ? 'flipped' : ''}">
+        <div class="inner">
+          <div class="back"></div>
+          <div class="face"><div class="art">
+            <span class="rn">${c.rn}</span>
+            <span class="sym">${c.sym}</span>
+            <span class="nmb"><span class="nm">${esc(c.name)}</span><span class="en">${esc(c.en)}</span></span>
+          </div></div>
+        </div>
+      </div>`;
+  }
+
+
+  function startTarot() {
+    const t = state.tarot;
+    t.deck = LottoTarot.shuffle();
+    t.picks = [];
+    t.results = [];
+    t.reading = null;
+    t.revealing = false;
+    $('#tarotReadingCard').hidden = true;
+    $('#tarotNumbersCard').hidden = true;
+    $('#tarotGuide').textContent = `마음속으로 이번 주의 소망을 떠올리며 카드 ${t.spread}장을 고르세요`;
+    renderTarotSlots();
+    $('#tarotDeck').classList.remove('done');
+    $('#tarotDeck').innerHTML = t.deck.map((p, i) => `
+      <button class="dcard" data-i="${i}" style="animation-delay:${i * 22}ms" aria-label="${i + 1}번째 카드 고르기">
+        <div class="tcard"><div class="inner"><div class="back"></div></div></div>
+      </button>`).join('');
+  }
+
+
+  function renderTarotSlots() {
+    const t = state.tarot;
+    const labels = LottoTarot.SPREADS[t.spread];
+    $('#tarotSlots').innerHTML = labels.map((label, i) => {
+      const p = t.picks[i];
+      return `<div class="slot" data-slot="${i}"><div class="pos">${label}</div>
+        ${p ? cardHTML(p, false) : '<div class="ph">카드를 고르세요</div>'}
+        <div class="cap"></div></div>`;
+    }).join('');
+  }
+
+
+  function onTarotPick(i, btn) {
+    const t = state.tarot;
+    if (t.revealing || t.picks.length >= t.spread || btn.classList.contains('picked')) return;
+    btn.classList.add('picked');
+    t.picks.push(t.deck[i]);
+    renderTarotSlots();
+    const left = t.spread - t.picks.length;
+    $('#tarotGuide').textContent = left ? `${left}장 더 고르세요` : '카드를 펼칩니다…';
+    if (!left) {
+      t.revealing = true;
+      $('#tarotDeck').classList.add('done');
+      setTimeout(revealTarot, 450);
+    }
+  }
+
+
+  function revealTarot() {
+    const t = state.tarot;
+    const slots = $$('#tarotSlots .slot');
+    slots.forEach((slot, i) => setTimeout(() => {
+      slot.querySelector('.tcard').classList.add('flipped');
+      const p = t.picks[i];
+      slot.querySelector('.cap').innerHTML = `<b>${esc(p.card.name)}</b><span class="ori ${p.reversed ? 'rev' : ''}">${p.reversed ? '역방향' : '정방향'}</span>`;
+    }, i * 550));
+    setTimeout(() => {
+      t.revealing = false;
+      $('#tarotGuide').textContent = '카드가 펼쳐졌습니다. 아래에서 해석과 번호를 확인하세요';
+      showTarotReading();
+    }, slots.length * 550 + 500);
+  }
+
+
+  function showTarotReading() {
+    const t = state.tarot;
+    if (!state.stats) return;
+    const lastDraw = state.allDraws[state.allDraws.length - 1];
+    t.reading = LottoTarot.reading(t.picks, state.stats, lastDraw);
+    const labels = LottoTarot.SPREADS[t.spread];
+
+    $('#tarotReading').innerHTML = t.picks.map((p, i) => {
+      const c = p.card;
+      const chips = t.reading.details[i].map((txt, k) =>
+        `<span class="chip ${k === 0 ? (p.reversed ? 'out' : 'in') : ''}">${esc(txt)}</span>`).join('');
+      return `<div class="ritem">
+        <div class="pos">${labels[i]}</div>
+        <h3>${esc(c.name)}<small>${c.rn} · ${p.reversed ? '역방향' : '정방향'}</small></h3>
+        <div class="kw">${esc(c.kw)}</div>
+        <p>${esc(p.reversed ? c.rev : c.up)}</p>
+        <p class="msg">${esc(c.msg)}${p.reversed ? ' (역방향이라 기운이 반대로 작용합니다)' : ''}</p>
+        <div class="chips">${chips}</div>
+      </div>`;
+    }).join('');
+    $('#tarotReadingCard').hidden = false;
+    generateTarot(false);
+    $('#tarotReadingCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+
+  function generateTarot(randomSeed) {
+    const t = state.tarot;
+    const r = t.reading;
+    if (!r) return;
+    const count = Math.max(1, Math.min(10, +$('#tarotCount').value || 3));
+    $('#tarotCount').value = count;
+    const filters = { ...readFilters(), ...r.filterPatch };
+    const nextNo = state.allDraws[state.allDraws.length - 1].no + 1;
+
+    let seed;
+    if (randomSeed) {
+      const a = new Uint32Array(1);
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      seed = a[0];
+    } else {
+      // 이번 주에 같은 카드(같은 방향)를 뽑으면 같은 번호
+      seed = E.hashString(['tarot', nextNo, t.picks.map(p => p.card.id + (p.reversed ? 'r' : 'u')).join('-'), count, JSON.stringify(filters)].join('|'));
+    }
+    const sets = E.generate(count, r.weights, r.fixed, filters, state.pastKeys, E.mulberry32(seed));
+    t.results = sets.map(s => ({ nums: s.set, relaxed: s.relaxed, fixed: r.fixed }));
+
+    const parts = [];
+    if (r.fixed.length) parts.push(`포함 <b>${r.fixed.join(', ')}</b>`);
+    if (r.excluded.length) parts.push(`제외 <b>${r.excluded.join(', ')}</b>`);
+    const fx = [];
+    if (r.filterPatch.spread) fx.push('번호대 분산');
+    if (r.filterPatch.oddEven) fx.push('홀짝·고저 쏠림 제외');
+    if (fx.length) parts.push(`카드 필터: ${fx.join(', ')}`);
+    $('#tarotSummary').innerHTML = `${nextNo}회 · ${parts.join(' · ')}${randomSeed ? ' · 새로 섞은 조합' : ''}`;
+
+    $('#tarotResults').innerHTML = t.results.length
+      ? t.results.map((x, i) => setRow(x, i, setActions(i))).join('')
+      : '<p class="empty">조건을 만족하는 조합을 만들지 못했습니다. 필터를 완화해 보세요.</p>';
+    $('#tarotNumbersCard').hidden = false;
   }
 
 
@@ -453,14 +605,15 @@
 
     $('#genBtn').addEventListener('click', generate);
 
-    $('#results').addEventListener('click', e => {
+    const onSetAction = (getList, label) => e => {
       const b = e.target.closest('button[data-act]');
       if (!b) return;
-      const r = state.results[+b.dataset.i];
+      const r = getList()[+b.dataset.i];
+      if (!r) return;
       if (b.dataset.act === 'copy') copyNums(r.nums);
       if (b.dataset.act === 'share') {
         const nextNo = state.allDraws[state.allDraws.length - 1].no + 1;
-        window.AndroidBridge.share(`[로또 ${nextNo}회 추천 번호]\n${r.nums.join(', ')}`);
+        window.AndroidBridge.share(`[로또 ${nextNo}회 ${label()}]\n${r.nums.join(', ')}`);
       }
       if (b.dataset.act === 'save') {
         const list = loadSaved();
@@ -468,9 +621,26 @@
         list.unshift({ nums: r.nums, fixed: r.fixed, at: new Date().toLocaleDateString('ko-KR') });
         storeSaved(list.slice(0, 50));
         renderSaved();
-        toast('저장했습니다.');
+        toast('저장했습니다. \'번호 추천\' 탭의 저장한 번호에서 볼 수 있어요.');
       }
+    };
+    $('#results').addEventListener('click', onSetAction(() => state.results, () => '추천 번호'));
+    $('#tarotResults').addEventListener('click', onSetAction(() => state.tarot.results,
+      () => `타로 추천 번호 · ${state.tarot.picks.map(p => p.card.name + (p.reversed ? '(역)' : '')).join(' · ')}`));
+
+    $('#spreadSel').addEventListener('click', e => {
+      const b = e.target.closest('button[data-n]');
+      if (!b || state.tarot.revealing) return;
+      state.tarot.spread = +b.dataset.n;
+      $$('#spreadSel button').forEach(x => x.classList.toggle('active', x === b));
+      startTarot();
     });
+    $('#shuffleBtn').addEventListener('click', () => { if (!state.tarot.revealing) startTarot(); });
+    $('#tarotDeck').addEventListener('click', e => {
+      const b = e.target.closest('.dcard');
+      if (b) onTarotPick(+b.dataset.i, b);
+    });
+    $('#tarotReroll').addEventListener('click', () => generateTarot(true));
 
     $('#saved').addEventListener('click', e => {
       const b = e.target.closest('button[data-act]');
@@ -539,6 +709,7 @@
     bind();
     renderStrategies();
     renderPref();
+    startTarot();
     try {
       setData(await LottoData.loadDefault());
     } catch (err) {
