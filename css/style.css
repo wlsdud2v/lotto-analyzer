@@ -460,3 +460,25 @@ input.num { width: 64px; text-align: center; }
 .sp-mode-info { margin: 4px 0 12px; min-height: 18px; }
 .sp-mode-info b { color: var(--text); }
 .sp-table td.live { color: var(--accent); font-weight: 700; }
+
+/* ───────── 상위 프로그램 전환 ───────── */
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.app { display: none; }
+.app.active { display: block; }
+.app-switch { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.app-btn { font: inherit; font-size: 17px; font-weight: 700; letter-spacing: -.02em; color: var(--muted); background: none; border: 0; border-radius: 10px; padding: 7px 14px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; transition: background .15s, color .15s; }
+.app-btn::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: .35; }
+.app-btn[data-app="lotto"]::before { background: var(--accent); }
+.app-btn[data-app="speetto"]::before { background: #6b4bd6; }
+.app-btn.active { background: var(--surface); color: var(--text); font-weight: 900; box-shadow: 0 1px 3px rgba(30,25,15,.12); }
+.app-btn.active::before { opacity: 1; }
+.app-btn:not(.active):hover { color: var(--text); }
+.brand .sub { margin-top: 6px; }
+.brand h1::before { display: none; }
+@media (max-width: 520px) {
+  .brand { width: 100%; }
+  .app-switch { width: 100%; }
+  .app-btn { flex: 1; justify-content: center; font-size: 15px; padding: 8px 8px; }
+}
+.sp-head-r .btn { white-space: nowrap; }

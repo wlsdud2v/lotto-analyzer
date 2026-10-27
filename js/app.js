@@ -20,6 +20,7 @@
     results: [],
     checkSel: [],
     sort: { key: 'n', asc: true },
+    app: 'lotto',
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
     sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false, status: null, mode: 'base', round: null },
@@ -268,6 +269,39 @@
     const el = $('#results');
     if (!state.results.length) { el.innerHTML = '<p class="empty">설정을 고른 뒤 <b>추천 번호 생성</b>을 누르세요.</p>'; return; }
     el.innerHTML = state.results.map((r, i) => setRow(r, i, setActions(i))).join('');
+  }
+
+
+  // ───────────────────────── 프로그램 전환 ─────────────────────────
+
+  const APP_TITLES = { lotto: '로또 번호 분석기', speetto: '스피또 시뮬레이터' };
+
+
+  function setApp(id, user) {
+    state.app = id;
+    $$('.app-btn').forEach(b => {
+      const on = b.dataset.app === id;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $$('.app').forEach(a => a.classList.toggle('active', a.id === 'app-' + id));
+    $$('[data-for]').forEach(el => { el.hidden = el.dataset.for !== id; });
+    $('#appTitle').textContent = APP_TITLES[id];
+    document.title = APP_TITLES[id];
+    if (user) {
+      try { localStorage.setItem('lotto.app', id); } catch (e) { /* 무시 */ }
+      try { history.replaceState(null, '', id === 'speetto' ? '#speetto' : location.pathname + location.search); } catch (e) { /* 무시 */ }
+      window.scrollTo({ top: 0 });
+    }
+    onViewChanged();
+  }
+
+
+  /** 보이는 화면이 바뀔 때: 추첨기 애니메이션, 스피또 데이터·긁기 판 */
+  function onViewChanged() {
+    const activeTab = appId => { const t = document.querySelector(`#app-${appId} .tab.active`); return t ? t.dataset.tab : null; };
+    if (state.machine.m) state.machine.m.setVisible(state.app === 'lotto' && activeTab('lotto') === 'machine');
+    if (state.app === 'speetto') onSpeettoShown();
   }
 
 
@@ -1015,17 +1049,28 @@
   function bind() {
     initMachine();
     initSpeetto();
+    // 탭: 각 프로그램(로또 / 스피또) 안에서만 전환
     $$('.tab').forEach(t => t.addEventListener('click', () => {
-      $$('.tab').forEach(x => x.classList.toggle('active', x === t));
-      $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t.dataset.tab));
-      if (state.machine.m) state.machine.m.setVisible(t.dataset.tab === 'machine');
-      if (t.dataset.tab === 'speetto') onSpeettoShown();
-      try { localStorage.setItem('lotto.tab', t.dataset.tab); } catch (e) { /* 무시 */ }
+      const app = t.closest('.app');
+      app.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+      app.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t.dataset.tab));
+      onViewChanged();
+      try { localStorage.setItem('lotto.tab.' + app.id, t.dataset.tab); } catch (e) { /* 무시 */ }
     }));
-    try {
-      const saved = localStorage.getItem('lotto.tab');
-      if (saved) { const t = $(`.tab[data-tab="${saved}"]`); t && t.click(); }
-    } catch (e) { /* 무시 */ }
+    $$('.app').forEach(app => {
+      try {
+        const saved = localStorage.getItem('lotto.tab.' + app.id) || (app.id === 'app-lotto' ? localStorage.getItem('lotto.tab') : null);
+        const t = saved && app.querySelector(`.tab[data-tab="${saved}"]`);
+        if (t) t.click();
+      } catch (e) { /* 무시 */ }
+    });
+
+    // 상위 프로그램 전환: 로또 번호 분석기 / 스피또 시뮬레이터
+    $$('.app-btn').forEach(b => b.addEventListener('click', () => setApp(b.dataset.app, true)));
+    window.addEventListener('hashchange', () => setApp(location.hash === '#speetto' ? 'speetto' : 'lotto', false));
+    let startApp = location.hash === '#speetto' ? 'speetto' : null;
+    if (!startApp) { try { startApp = localStorage.getItem('lotto.app'); } catch (e) { /* 무시 */ } }
+    setApp(startApp === 'speetto' ? 'speetto' : 'lotto', false);
 
     $('#rangeSel').addEventListener('change', e => { state.range = +e.target.value; refreshStats(); });
     $('#recentSel').addEventListener('change', e => { state.recentN = +e.target.value; refreshStats(); });
