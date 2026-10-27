@@ -65,6 +65,7 @@
 
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="recommend" role="tab">번호 추천</button>
+      <button class="tab" data-tab="teachers" role="tab">로또 선생<span class="ribbon new">NEW</span></button>
       <button class="tab" data-tab="tarot" role="tab">타로 추천<span class="ribbon hot">HOT</span></button>
       <button class="tab" data-tab="machine" role="tab">추첨기<span class="ribbon new">NEW</span></button>
       <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
@@ -128,6 +129,39 @@
             <div id="saved" class="set-list"></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ───────────── 로또 선생 ───────────── -->
+    <section class="panel" id="tab-teachers">
+      <div class="card">
+        <div class="card-head">
+          <h2 id="tcTitle">이번 주 로또 선생</h2>
+          <span class="hint" id="tcInfo">불러오는 중…</span>
+        </div>
+        <div class="tc-grid" id="tcGrid"></div>
+        <p class="note">
+          네 선생의 번호와 운세는 회차마다 고정되어 누가 보더라도 같고, 매주 추첨이 끝나면 자동으로 다음 회차 번호가 정해져 저장소에 기록됩니다.
+          각 회차 번호는 그 회차 추첨 <b>전</b>까지의 당첨 데이터만으로 만들었습니다. 재미로 즐겨 주세요 — 누구 말을 믿을지는 여러분의 몫입니다.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>선생별 적중률</h2>
+          <div class="seg" id="tcPeriod"><button data-p="0" class="active">1회부터 전체</button><button data-p="52">최근 52주</button><button data-p="10">최근 10주</button></div>
+        </div>
+        <div class="table-wrap"><table class="tc-table" id="tcRank"></table></div>
+        <p class="note">적중률 = 5등 이상(번호 3개 이상 일치) 당첨된 주의 비율. 무작위로 고를 때의 이론값은 평균 0.80개 일치, 적중률 약 1.87%입니다.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>지난 기록</h2>
+          <span class="hint">숫자는 맞힌 개수 · 색칠된 칸은 당첨 · 굵은 번호가 맞힌 번호</span>
+        </div>
+        <div class="table-wrap"><table class="tc-table tc-hist" id="tcHist"></table></div>
+        <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="tcMore">더 보기</button></div>
       </div>
     </section>
 
@@ -345,6 +379,7 @@
   <script src="js/tarot.js"></script>
   <script src="js/drum.js"></script>
   <script src="js/speetto.js"></script>
+  <script src="js/teachers.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

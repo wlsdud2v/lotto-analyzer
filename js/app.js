@@ -21,6 +21,7 @@
     checkSel: [],
     sort: { key: 'n', asc: true },
     app: 'lotto',
+    tc: { loading: false, data: null, period: 0, histN: 15, list: [] },
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
     sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false, status: null, mode: 'base', round: null },
@@ -99,6 +100,8 @@
     renderResults();
     renderSaved();
     renderCheck();
+    if (state.tc.data && state.tc.data.next_round < draws[draws.length - 1].no + 1) state.tc.data = null;
+    if (typeof state.app !== 'undefined') onViewChanged();
   }
 
 
@@ -302,6 +305,160 @@
     const activeTab = appId => { const t = document.querySelector(`#app-${appId} .tab.active`); return t ? t.dataset.tab : null; };
     if (state.machine.m) state.machine.m.setVisible(state.app === 'lotto' && activeTab('lotto') === 'machine');
     if (state.app === 'speetto') onSpeettoShown();
+    if (state.app === 'lotto' && activeTab('lotto') === 'teachers') onTeachersShown();
+  }
+
+
+  // ───────────────────────── 로또 선생 ─────────────────────────
+
+  const TC_MIRROR = 'https://raw.githubusercontent.com/wlsdud2v/lotto-analyzer/main/data/teachers.json';
+  const RANK_NAME = ['', '1등', '2등', '3등', '4등', '5등'];
+
+
+  async function onTeachersShown() {
+    const tc = state.tc;
+    if (!state.allDraws.length) return;
+    const latest = state.allDraws[state.allDraws.length - 1].no;
+    if (tc.data && tc.data.next_round >= latest + 1) return;
+    if (tc.loading) return;
+    tc.loading = true;
+    try {
+      tc.data = await loadTeacherData();
+      renderTeachers();
+    } finally {
+      tc.loading = false;
+    }
+  }
+
+
+  /**
+   * 저장소의 data/teachers.json 을 읽고, 이 기기가 가진 당첨 데이터가 더 최신이면
+   * 빠진 회차만 같은 규칙으로 직접 계산해 채운다 (결과는 저장소 계산과 동일).
+   */
+  async function loadTeacherData() {
+    const T = LottoTeachers;
+    let data = null, source = '저장소';
+    if (location.protocol.startsWith('http')) {
+      try { const r = await fetch('data/teachers.json', { cache: 'no-cache' }); if (r.ok) data = await r.json(); } catch (e) { /* 다음 */ }
+    }
+    if (!data) {
+      try { data = JSON.parse(await LottoUpdater.getText(TC_MIRROR)); } catch (e) { /* 직접 계산 */ }
+    }
+    const draws = state.allDraws;
+    const contiguous = draws.every((d, i) => d.no === i + 1);
+    const latest = draws[draws.length - 1].no;
+    const next = latest + 1;
+    if (!data) {
+      if (!contiguous) throw new Error('데이터 없음');
+      data = { teachers: T.TEACHERS, picks: {}, fortunes: {} };
+      Object.assign(data.picks, T.computeRange(LottoEngine, draws, Math.max(1, next - 52), next));
+      source = '이 기기에서 계산 (최근 52주)';
+    }
+    if (contiguous) {
+      for (let r = (data.next_round || 1); r <= next; r++) {
+        if (!data.picks[r]) { Object.assign(data.picks, T.computeRange(LottoEngine, draws, r, r)); source = '저장소 + 이 기기에서 최신 회차 계산'; }
+      }
+    }
+    if (!data.fortunes[next]) data.fortunes[next] = T.fortunesFor(LottoEngine, draws, data.picks, next);
+    data.next_round = next;
+    data.source = source;
+    return data;
+  }
+
+
+  /** 선생별 성적 (periodWeeks 0 = 전체) */
+  function teacherStats(id, periodWeeks) {
+    const draws = state.allDraws;
+    const picks = state.tc.data.picks;
+    const from = periodWeeks ? Math.max(0, draws.length - periodWeeks) : 0;
+    const st = { n: 0, sum: 0, ranks: [0, 0, 0, 0, 0, 0], best: null };
+    for (let i = from; i < draws.length; i++) {
+      const d = draws[i], p = picks[d.no] && picks[d.no][id];
+      if (!p) continue;
+      const g = LottoTeachers.grade(p, d);
+      st.n++; st.sum += g.m; st.ranks[g.rank]++;
+      if (g.rank && (!st.best || g.rank < st.best.rank || (g.rank === st.best.rank && d.no > st.best.no))) st.best = { rank: g.rank, no: d.no };
+    }
+    st.avg = st.n ? st.sum / st.n : 0;
+    st.wins = st.n - st.ranks[0];
+    st.rate = st.n ? st.wins / st.n : 0;
+    return st;
+  }
+
+
+  function renderTeachers() {
+    const data = state.tc.data;
+    const next = data.next_round;
+    const lastDraw = state.allDraws[state.allDraws.length - 1];
+    const nextDate = addDays(lastDraw.date, 7);
+    $('#tcTitle').textContent = `이번 주 로또 선생 — ${next}회`;
+    $('#tcInfo').textContent = `${nextDate} 추첨 · ${data.source}`;
+
+    const all = LottoTeachers.TEACHERS.map(t => ({ t, st: teacherStats(t.id, 0) }));
+    const bestRate = Math.max(...all.map(x => x.st.rate));
+    state.tc.list = [];
+    $('#tcGrid').innerHTML = all.map(({ t, st }, i) => {
+      const nums = data.picks[next][t.id];
+      const f = data.fortunes[next][t.id];
+      state.tc.list.push({ nums, fixed: [] });
+      const prev = data.picks[lastDraw.no] && data.picks[lastDraw.no][t.id];
+      const pg = prev ? LottoTeachers.grade(prev, lastDraw) : null;
+      const stars = '★'.repeat(f.stars) + '☆'.repeat(5 - f.stars);
+      const share = window.AndroidBridge ? `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : '';
+      return `<div class="tc-card ${st.rate === bestRate ? 'best' : ''}" style="--tc:${t.color}">
+        <div class="tc-top">
+          <div class="tc-ava" aria-hidden="true">${t.hanja}</div>
+          <div class="tc-name"><b>${t.name}</b><span class="tc-style">${t.style}</span></div>
+          <div class="tc-stars" title="이번 주 스스로 본 운세">${stars}<small>이번 주 운세</small></div>
+        </div>
+        <div class="tc-bubble">${f.text}</div>
+        <div class="balls">${nums.map(n => ball(n)).join('')}</div>
+        <div class="tc-mini">
+          <span>적중률 <b>${(st.rate * 100).toFixed(2)}%</b></span>
+          <span>평균 <b>${st.avg.toFixed(2)}개</b></span>
+          ${pg ? `<span>지난주 <b>${pg.m}개</b>${pg.rank ? ` (${RANK_NAME[pg.rank]})` : ''}</span>` : ''}
+        </div>
+        <div class="tc-acts"><button class="btn ghost sm" data-act="copy" data-i="${i}">복사</button>${share}<button class="btn ghost sm" data-act="save" data-i="${i}">저장</button></div>
+      </div>`;
+    }).join('');
+    renderTcRank();
+    renderTcHist();
+  }
+
+
+  function renderTcRank() {
+    const rows = LottoTeachers.TEACHERS.map(t => ({ t, st: teacherStats(t.id, state.tc.period) }))
+      .sort((a, b) => b.st.rate - a.st.rate || b.st.avg - a.st.avg);
+    $('#tcRank').innerHTML = `<thead><tr><th class="l">순위</th><th class="l">선생</th><th>회차 수</th><th>평균 일치</th><th>적중률</th>
+        <th>5등</th><th>4등</th><th>3등</th><th>2등</th><th>1등</th><th class="l">최고 성적</th></tr></thead><tbody>` +
+      rows.map((x, i) => `<tr>
+        <td class="l">${i + 1}</td>
+        <td class="l"><span class="tc-who" style="--tc:${x.t.color}"><span class="tc-dot">${x.t.hanja}</span>${x.t.name}</span></td>
+        <td>${fmt(x.st.n)}</td><td>${x.st.avg.toFixed(3)}</td><td><b>${(x.st.rate * 100).toFixed(2)}%</b></td>
+        ${[5, 4, 3, 2, 1].map(k => `<td>${x.st.ranks[k] || '-'}</td>`).join('')}
+        <td class="l">${x.st.best ? `${x.st.best.no}회 ${RANK_NAME[x.st.best.rank]}` : '-'}</td></tr>`).join('') + '</tbody>';
+  }
+
+
+  function renderTcHist() {
+    const draws = state.allDraws, picks = state.tc.data.picks;
+    const n = Math.min(state.tc.histN, draws.length);
+    const T = LottoTeachers.TEACHERS;
+    let html = `<thead><tr><th class="l">회차</th><th class="l">당첨 번호</th>${T.map(t => `<th class="l"><span class="tc-who" style="--tc:${t.color}"><span class="tc-dot">${t.hanja}</span>${t.name.replace(' 선생', '')}</span></th>`).join('')}</tr></thead><tbody>`;
+    for (let i = draws.length - 1; i >= draws.length - n; i--) {
+      const d = draws[i];
+      html += `<tr><td class="l">${d.no}회</td><td class="l"><div class="balls">${d.nums.map(x => ball(x, 'sm')).join('')}</div></td>`;
+      for (const t of T) {
+        const p = picks[d.no] && picks[d.no][t.id];
+        if (!p) { html += '<td class="l">-</td>'; continue; }
+        const g = LottoTeachers.grade(p, d);
+        html += `<td class="l ${g.rank ? 'hit' : ''}"><span class="m">${g.m}</span>개${g.rank ? `<span class="rk">${RANK_NAME[g.rank]}</span>` : ''}
+          <span class="pk">${p.map(x => d.nums.includes(x) ? `<b>${x}</b>` : x).join(' ')}</span></td>`;
+      }
+      html += '</tr>';
+    }
+    $('#tcHist').innerHTML = html + '</tbody>';
+    $('#tcMore').hidden = n >= draws.length;
   }
 
 
@@ -1127,6 +1284,15 @@
       if (b) onTarotPick(+b.dataset.i, b);
     });
     $('#tarotReroll').addEventListener('click', () => generateTarot(true));
+    $('#tcGrid').addEventListener('click', onSetAction(() => state.tc.list, () => '로또 선생 번호'));
+    $('#tcPeriod').addEventListener('click', e => {
+      const b = e.target.closest('button[data-p]');
+      if (!b) return;
+      state.tc.period = +b.dataset.p;
+      $$('#tcPeriod button').forEach(x => x.classList.toggle('active', x === b));
+      renderTcRank();
+    });
+    $('#tcMore').addEventListener('click', () => { state.tc.histN += 15; renderTcHist(); });
     $('#machineHistory').addEventListener('click', onSetAction(() => state.machine.history, () => '물리 추첨기 번호'));
 
     $('#saved').addEventListener('click', e => {

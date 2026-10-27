@@ -482,3 +482,37 @@ input.num { width: 64px; text-align: center; }
   .app-btn { flex: 1; justify-content: center; font-size: 15px; padding: 8px 8px; }
 }
 .sp-head-r .btn { white-space: nowrap; }
+
+/* ───────── 로또 선생 ───────── */
+.tc-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.tc-card { --tc: #555; border: 1px solid var(--line); border-top: 4px solid var(--tc); border-radius: 12px; padding: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
+.tc-card.best { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 45%, transparent); }
+.tc-top { display: flex; align-items: center; gap: 10px; }
+.tc-ava { width: 48px; height: 48px; border-radius: 50%; background: var(--tc); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; font-family: "Noto Serif KR", "Batang", serif; flex: none; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+.tc-name b { font-size: 16px; display: block; letter-spacing: -.02em; }
+.tc-style { display: inline-block; font-size: 11.5px; padding: 0 7px; border-radius: 999px; color: var(--tc); border: 1px solid var(--tc); margin-top: 2px; font-weight: 700; }
+.tc-stars { font-size: 13px; color: #e0a800; letter-spacing: 1px; margin-left: auto; white-space: nowrap; }
+.tc-stars small { color: var(--muted); font-size: 11px; letter-spacing: 0; display: block; text-align: right; }
+.tc-bubble { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.55; }
+.tc-bubble::before { content: ""; position: absolute; top: -7px; left: 18px; width: 12px; height: 12px; background: var(--surface); border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); }
+.tc-card .balls { gap: 5px; }
+.tc-card .ball { width: 32px; height: 32px; font-size: 13.5px; }
+.tc-mini { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.tc-mini b { color: var(--text); }
+.tc-acts { display: flex; gap: 6px; margin-top: auto; }
+.tc-table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.tc-table th, .tc-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.tc-table th { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.tc-table td:first-child, .tc-table th:first-child, .tc-table td.l, .tc-table th.l { text-align: left; }
+.tc-who { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.tc-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--tc); color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; font-family: serif; }
+.tc-hist td { vertical-align: top; }
+.tc-hist .hit { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.tc-hist .m { font-weight: 900; font-size: 15px; }
+.tc-hist .rk { font-size: 11px; color: var(--ok); font-weight: 700; margin-left: 3px; }
+.tc-hist .pk { display: block; font-size: 11.5px; color: var(--muted); letter-spacing: -.01em; }
+.tc-hist .pk b { color: var(--text); }
+.tc-hist .balls { flex-wrap: nowrap; gap: 3px; }
+.tc-hist .ball.sm { width: 24px; height: 24px; font-size: 11px; }
+@media (max-width: 1000px) { .tc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .tc-grid { grid-template-columns: minmax(0, 1fr); } }
