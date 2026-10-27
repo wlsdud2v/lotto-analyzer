@@ -73,6 +73,8 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html og.png css js img data _site/
+          # 배포마다 css/js 주소에 버전을 붙여 브라우저가 예전 파일을 섞어 쓰지 않게 함
+          sed -i -E "s#(src|href)=\"((css|js|data)/[^\"?]+)\"#\1=\"\2?v=${GITHUB_SHA::7}\"#g" _site/index.html
 
       - uses: actions/configure-pages@v5
 
