@@ -32,12 +32,22 @@ jobs:
       - name: 최신 당첨 번호 추가
         if: github.event_name != 'push'
         continue-on-error: true
-        run: node tools/update_data.js
+        run: |
+          if node tools/update_data.js > lotto.log 2>&1; then
+            echo "::notice title=로또::$(tr '\n' ' ' < lotto.log)"
+          else
+            echo "::warning title=로또::$(tr '\n' ' ' < lotto.log)"; exit 1
+          fi
 
       - name: 스피또 발행 현황 갱신
         if: github.event_name != 'push'
         continue-on-error: true
-        run: node tools/update_speetto.js
+        run: |
+          if node tools/update_speetto.js > sp.log 2>&1; then
+            echo "::notice title=스피또::$(tr '\n' ' ' < sp.log)"
+          else
+            echo "::warning title=스피또::$(tr '\n' ' ' < sp.log)"; exit 1
+          fi
 
       - name: 변경된 데이터 커밋
         if: github.event_name != 'push'
