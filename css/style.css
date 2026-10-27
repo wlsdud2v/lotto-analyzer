@@ -451,3 +451,12 @@ input.num { width: 64px; text-align: center; }
   .card-head .seg button { padding: 7px 8px; font-size: 12.5px; }
   .sp-bulk-ctrl .seg button { padding: 7px 8px; font-size: 12.5px; }
 }
+
+.sp-ranks tr.need td { padding: 0 0 6px; font-size: 12px; color: var(--muted); text-align: left !important; }
+.sp-ranks tr.need b { color: var(--text); }
+.sp-mode { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.sp-mode .lbl { font-size: 14px; font-weight: 500; }
+.sp-mode select { font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.sp-mode-info { margin: 4px 0 12px; min-height: 18px; }
+.sp-mode-info b { color: var(--text); }
+.sp-table td.live { color: var(--accent); font-weight: 700; }

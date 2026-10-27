@@ -22,7 +22,7 @@
     sort: { key: 'n', asc: true },
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
-    sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false },
+    sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false, status: null, mode: 'base', round: null },
   };
 
   const MAX_FIX = 5;
@@ -359,6 +359,51 @@
 
   const SP = () => LottoSpeetto;
   const spGame = () => SP().GAMES[state.sp.game];
+  const sellingRounds = gameId => ((state.sp.status && state.sp.status.games[gameId]) || [])
+    .filter(x => x.status === '판매중').sort((a, b) => b.round - a.round);
+
+
+  /** 현재 선택(공식 구조 / 잔여 반영)에 맞는 게임 확률 */
+  function spEffective() {
+    const sp = state.sp;
+    if (sp.mode === 'live') {
+      const r = sellingRounds(sp.game).find(x => x.round === sp.round);
+      if (r) return { eg: SP().effective(sp.game, SP().liveModel(sp.game, r).probs), model: SP().liveModel(sp.game, r) };
+    }
+    return { eg: SP().effective(sp.game, null), model: null };
+  }
+
+
+  /** 입고율이 있는 가장 최근 회차를 기본으로 */
+  function defaultRound(gameId) {
+    const list = sellingRounds(gameId);
+    const r = list.find(x => x.shipRate > 0) || list[0];
+    return r ? r.round : null;
+  }
+
+
+  function renderSpMode() {
+    const sp = state.sp;
+    $$('#spModeSel button').forEach(x => x.classList.toggle('active', x.dataset.m === sp.mode));
+    const sel = $('#spRoundSel');
+    const list = sellingRounds(sp.game);
+    sel.hidden = sp.mode !== 'live';
+    if (sp.mode === 'live') {
+      if (!list.some(x => x.round === sp.round)) sp.round = defaultRound(sp.game);
+      sel.innerHTML = list.map(x => `<option value="${x.round}" ${x.round === sp.round ? 'selected' : ''}>${x.round}회 · 입고율 ${x.shipRate}%</option>`).join('');
+    }
+    const info = $('#spModeInfo');
+    const { eg, model } = spEffective();
+    if (sp.mode === 'live' && !model) {
+      info.innerHTML = sp.status ? '판매 중인 회차가 없어 공식 당첨 구조를 씁니다.' : '발행 현황을 불러오는 중…';
+    } else if (model) {
+      info.innerHTML = `${model.round}회 · 판매 추정 <b>${Math.round(model.sold * 100)}%</b> · 남은 복권 약 <b>${SP().shortWon(model.R)}장</b> → `
+        + eg.ranks.slice(0, 3).map(k => `${k.rank}등 1/${fmt(Math.round(1 / k.p))}`).join(' · ')
+        + ` · 환급률 ${(eg.payout * 100).toFixed(1)}%`;
+    } else {
+      info.textContent = '동행복권 공식 당첨 구조(발행 단위 기준)의 확률로 뽑습니다.';
+    }
+  }
 
 
   function initSpeetto() {
@@ -369,11 +414,19 @@
       finalizeTicket();
       state.sp.game = b.dataset.g;
       state.sp.ticket = null;
+      state.sp.round = defaultRound(state.sp.game);
       $$('#spGameSel button').forEach(x => x.classList.toggle('active', x === b));
       renderTicket();
-      renderSpStructure();
-      $('#spBulkResult').innerHTML = '';
+      onSpModelChanged();
     });
+    $('#spModeSel').addEventListener('click', e => {
+      const b = e.target.closest('button[data-m]');
+      if (!b) return;
+      state.sp.mode = b.dataset.m;
+      if (state.sp.mode === 'live' && !state.sp.status) loadSpStatus(false);
+      onSpModelChanged();
+    });
+    $('#spRoundSel').addEventListener('change', e => { state.sp.round = +e.target.value; onSpModelChanged(); });
     $('#spBuy').addEventListener('click', buyTicket);
     $('#spReveal').addEventListener('click', () => revealTicket());
     $('#spBulkN').addEventListener('click', e => {
@@ -382,12 +435,20 @@
       state.sp.bulkN = +b.dataset.n;
       $$('#spBulkN button').forEach(x => x.classList.toggle('active', x === b));
     });
-    $('#spBulkGo').addEventListener('click', () => renderBulk(SP().bulk(state.sp.game, state.sp.bulkN)));
-    $('#spUntil').addEventListener('click', () => renderBulk(SP().untilFirst(state.sp.game)));
+    $('#spBulkGo').addEventListener('click', () => renderBulk(SP().bulk(state.sp.game, state.sp.bulkN, spEffective().eg)));
+    $('#spUntil').addEventListener('click', () => renderBulk(SP().untilFirst(state.sp.game, spEffective().eg)));
     $('#spRefresh').addEventListener('click', () => loadSpStatus(true));
     renderTicket();
     renderSession();
+    renderSpMode();
     renderSpStructure();
+  }
+
+
+  function onSpModelChanged() {
+    renderSpMode();
+    renderSpStructure();
+    $('#spBulkResult').innerHTML = '';
   }
 
 
@@ -417,6 +478,8 @@
 
 
   function renderSpStatus(st) {
+    state.sp.status = st;
+    if (state.sp.round == null) state.sp.round = defaultRound(state.sp.game);
     const games = SP().GAMES;
     let dataDate = '';
     $('#spStatus').innerHTML = Object.keys(games).map(g => {
@@ -424,17 +487,24 @@
       const prizes = games[g].ranks;
       const rounds = list.map(x => {
         if (x.dataDate && x.dataDate > dataDate) dataDate = x.dataDate;
+        const model = SP().liveModel(g, x);
+        const price = games[g].price;
         const rows = [x.rank1, x.rank2, x.rank3].map((q, i) => {
           if (!q) return '';
           const wonN = q.total - q.left;
+          const p = model.probs[i + 1];
+          const need = q.left > 0 && p > 0
+            ? `당첨까지 평균 <b>${SP().shortWon(price / p)}원</b> · 1/${fmt(Math.round(1 / p))}`
+            : '남은 당첨권 없음';
           return `<tr><td>${i + 1}등</td><td>${SP().won(prizes[i].prize)}원</td>
             <td class="${q.left === q.total ? 'left-all' : ''}">잔여 ${fmt(q.left)}/${fmt(q.total)}</td>
-            <td class="${wonN ? 'won' : ''}">당첨 ${fmt(wonN)}</td></tr>`;
+            <td class="${wonN ? 'won' : ''}">당첨 ${fmt(wonN)}</td></tr>
+            <tr class="need"><td colspan="4">${need}</td></tr>`;
         }).join('');
         return `<div class="sp-round">
           <div class="rh"><b>${x.round}회</b><span class="end">판매 ~${x.saleEnd || '-'}</span></div>
           <div class="sp-bar"><i style="width:${Math.min(100, x.shipRate || 0)}%"></i></div>
-          <div class="sp-rate"><span>입고율 <b>${x.shipRate}%</b></span><span>1등 ${x.prize1 || ''}</span></div>
+          <div class="sp-rate"><span>입고율 <b>${x.shipRate}%</b> · 판매 추정 ${Math.round(model.sold * 100)}%</span><span>남은 약 ${SP().shortWon(model.R)}장</span></div>
           <table class="sp-ranks">${rows}</table>
         </div>`;
       }).join('');
@@ -442,6 +512,8 @@
     }).join('');
     const fetched = st.fetched_at ? new Date(st.fetched_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     $('#spStatusInfo').textContent = `${st.live ? '동행복권 실시간' : '자동 수집본'} · 기준일 ${dataDate || '-'}${fetched ? ` · ${fetched} 수집` : ''}`;
+    renderSpMode();
+    renderSpStructure();
   }
 
 
@@ -449,7 +521,7 @@
 
   function buyTicket() {
     finalizeTicket();
-    const t = SP().makeTicket(state.sp.game);
+    const t = SP().makeTicket(state.sp.game, spEffective().eg);
     t.revealed = false;
     t.counted = false;
     state.sp.ticket = t;
@@ -589,7 +661,7 @@
   // ── 대량 시뮬레이션
 
   function renderBulk(r) {
-    const g = SP().GAMES[r.gameId];
+    const g = r.eg || SP().GAMES[r.gameId];
     const net = r.prize - r.cost;
     const rate = r.cost ? r.prize / r.cost : 0;
     const rows = g.ranks.map(k => {
@@ -604,7 +676,7 @@
         <div><div class="k">${g.name} ${fmt(r.n)}장 구매</div><div class="v">${fmt(r.cost)}원</div></div>
         <div><div class="k">당첨금 합계</div><div class="v">${fmt(r.prize)}원</div></div>
         <div><div class="k">손익</div><div class="v" style="color:${net < 0 ? 'var(--fix)' : 'var(--ok)'}">${net > 0 ? '+' : ''}${fmt(net)}원</div></div>
-        <div><div class="k">환급률 (이론 ${(g.payout * 100).toFixed(1)}%)</div><div class="v">${(rate * 100).toFixed(1)}%</div></div>
+        <div><div class="k">환급률 (${g.live ? '잔여 반영 ' : '이론 '}${(g.payout * 100).toFixed(1)}%)</div><div class="v">${(rate * 100).toFixed(1)}%</div></div>
       </div>
       <div class="table-wrap"><table class="sp-table">
         <thead><tr><th>등위</th><th>당첨금</th><th>당첨 매수</th><th>기대 매수</th></tr></thead>
@@ -615,14 +687,22 @@
 
   function renderSpStructure() {
     const g = spGame();
-    const rows = g.ranks.map(k => `<tr><td>${k.rank}등</td><td>${SP().wonFull(k.prize)}</td><td>1/${fmt(Math.round(1 / k.p * 10) / 10)}</td><td>${fmt(k.count)}매</td></tr>`).join('');
+    const { eg, model } = spEffective();
+    const odds = p => `1/${fmt(Math.round(1 / p * 10) / 10)}`;
+    const rows = g.ranks.map((k, i) => {
+      const lp = eg.ranks[i].p;
+      return `<tr><td>${k.rank}등</td><td>${SP().wonFull(k.prize)}</td><td>${odds(k.p)}</td>
+        ${model ? `<td class="${Math.abs(lp - k.p) / k.p > 0.005 ? 'live' : ''}">${odds(lp)}</td>` : ''}
+        <td>${SP().shortWon(g.price / lp)}원</td></tr>`;
+    }).join('');
     $('#spStructure').innerHTML = `
-      <h3>${g.name} 당첨 구조 (${fmt(g.issue)}매 발행 기준)</h3>
+      <h3>${g.name} 당첨 구조 (${fmt(g.issue)}매 발행 기준)${model ? ` · ${model.round}회 잔여 반영` : ''}</h3>
       <div class="table-wrap"><table class="sp-table">
-        <thead><tr><th>등위</th><th>당첨금</th><th>확률</th><th>매수</th></tr></thead>
+        <thead><tr><th>등위</th><th>당첨금</th><th>공식 확률</th>${model ? '<th>현재 추정</th>' : ''}<th>평균 필요 금액</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
-      <p class="note">아무 등위나 당첨될 확률 1/${(1 / g.winP).toFixed(1)} · 이론 환급률 ${(g.payout * 100).toFixed(2)}% — 평균적으로 산 금액의 ${Math.round((1 - g.payout) * 100)}%는 돌아오지 않습니다.</p>`;
+      <p class="note">아무 등위나 당첨될 확률 1/${(1 / eg.winP).toFixed(1)} · ${model ? '잔여 반영' : '이론'} 환급률 ${(eg.payout * 100).toFixed(2)}% — 평균적으로 산 금액의 ${Math.round((1 - eg.payout) * 100)}%는 돌아오지 않습니다.
+      ${model ? '4등 이하는 잔여가 공개되지 않아 공식 확률을 씁니다.' : ''}</p>`;
   }
 
 

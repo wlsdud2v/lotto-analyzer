@@ -98,9 +98,9 @@ const LottoSpeetto = (() => {
 
 
   /** 화면에 그릴 카드 내용 생성 (결과와 일치하도록) */
-  function makeTicket(gameId) {
+  function makeTicket(gameId, eg) {
     const game = GAMES[gameId];
-    const win = drawOutcome(game);
+    const win = drawOutcome(eg || game);
     const amounts = [...new Set([...game.ranks.map(r => r.prize), ...game.decoys])];
 
     if (game.style === 'match3') {
@@ -140,8 +140,8 @@ const LottoSpeetto = (() => {
 
 
   /** N장 한 번에 */
-  function bulk(gameId, n) {
-    const game = GAMES[gameId];
+  function bulk(gameId, n, eg) {
+    const game = eg || GAMES[gameId];
     const counts = {};
     let prize = 0, best = 0;
     for (let i = 0; i < n; i++) {
@@ -152,7 +152,7 @@ const LottoSpeetto = (() => {
         if (r.prize > best) best = r.prize;
       }
     }
-    return { gameId, n, cost: n * game.price, prize, best, counts };
+    return { gameId, n, cost: n * game.price, prize, best, counts, eg: game };
   }
 
 
@@ -165,8 +165,8 @@ const LottoSpeetto = (() => {
 
 
   /** 1등이 나올 때까지 산다면 (기하분포 + 나머지 등위는 정규 근사) */
-  function untilFirst(gameId) {
-    const game = GAMES[gameId];
+  function untilFirst(gameId, eg) {
+    const game = eg || GAMES[gameId];
     const top = game.ranks[0];
     const n = Math.max(1, Math.ceil(Math.log(1 - rand()) / Math.log(1 - top.p)));
     const counts = { [top.rank]: 1 };
@@ -177,7 +177,52 @@ const LottoSpeetto = (() => {
       counts[r.rank] = c;
       prize += c * r.prize;
     }
-    return { gameId, n, cost: n * game.price, prize, best: top.prize, counts, untilFirst: true };
+    return { gameId, n, cost: n * game.price, prize, best: top.prize, counts, untilFirst: true, eg: game };
+  }
+
+
+  // ───────────────────────── 잔여 반영 확률 ─────────────────────────
+
+  /**
+   * 현재 회차의 입고율·잔여로 '지금 1장 살 때' 등위별 확률을 추정.
+   *  - 발행 매수 = 1등 발행 매수 × 기본 발행 단위(1등 1매당 500만/400만 매)
+   *  - 판매 추정 = 3등(매수가 가장 많은 공개 등위)의 당첨 비율, 입고율을 넘지 않게
+   *  - 남은 복권 = 발행 매수 × (1 − 판매 추정)   (최소 2%)
+   *  - 확률 = 등위별 잔여 ÷ 남은 복권   (잔여 당첨권이 남은 복권에 고르게 섞여 있다고 가정)
+   *  4등 이하는 공개되지 않아 공식 확률을 그대로 씀.
+   */
+  function liveModel(gameId, round) {
+    const g = GAMES[gameId];
+    const sets = round.rank1 && round.rank1.total ? round.rank1.total / g.ranks[0].count : 1;
+    const N = sets * g.issue;
+    const ship = Math.min(1, Math.max(0, (round.shipRate || 0) / 100));
+    const r3 = round.rank3;
+    let sold = r3 && r3.total ? (r3.total - r3.left) / r3.total : ship;
+    sold = Math.max(0, Math.min(sold, ship));
+    const R = Math.max(N * (1 - sold), N * 0.02);
+    const probs = {};
+    [round.rank1, round.rank2, round.rank3].forEach((q, i) => { if (q) probs[i + 1] = q.left / R; });
+    return { gameId, round: round.round, N, sets, ship, sold, R, probs };
+  }
+
+
+  /** 확률을 바꾼 게임 객체 (probs 가 없으면 공식 구조) */
+  function effective(gameId, probs) {
+    const g = GAMES[gameId];
+    const ranks = g.ranks.map(r => ({ ...r, p: probs && probs[r.rank] != null ? probs[r.rank] : r.p }));
+    const winP = ranks.reduce((t, r) => t + r.p, 0);
+    const payout = ranks.reduce((t, r) => t + r.p * r.prize, 0) / g.price;
+    return { ...g, ranks, winP, payout, live: !!probs };
+  }
+
+
+  /** 큰 금액 짧게: 92억, 1.5억, 3,200만 */
+  function shortWon(n) {
+    if (!isFinite(n)) return '∞';
+    if (n >= 1e12) return (Math.round(n / 1e11) / 10).toLocaleString('ko-KR') + '조';
+    if (n >= 1e8) return (n >= 1e9 ? Math.round(n / 1e8) : Math.round(n / 1e7) / 10).toLocaleString('ko-KR') + '억';
+    if (n >= 1e4) return Math.round(n / 1e4).toLocaleString('ko-KR') + '만';
+    return Math.round(n).toLocaleString('ko-KR');
   }
 
 
@@ -226,5 +271,5 @@ const LottoSpeetto = (() => {
   }
 
 
-  return { GAMES, won, wonFull, makeTicket, bulk, untilFirst, loadStatus };
+  return { GAMES, won, wonFull, shortWon, makeTicket, bulk, untilFirst, loadStatus, liveModel, effective };
 })();

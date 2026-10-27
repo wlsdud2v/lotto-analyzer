@@ -215,7 +215,10 @@
         <div class="sp-status" id="spStatus"></div>
         <p class="note">
           <b>입고율</b>은 해당 회차 발행 매수 중 판매점에 공급(출고)된 비율, <b>잔여</b>는 아직 주인을 찾지 않은 당첨 복권 수,
-          <b>당첨</b>은 발행 매수 − 잔여 입니다. 출처: 동행복권 즉석식 복권 발행내역.
+          <b>당첨</b>은 발행 매수 − 잔여 입니다. <b>필요 금액</b>은 지금 1장 살 때의 추정 확률로 계산한 '평균적으로 한 번 당첨되기까지 사야 하는 금액'입니다.
+          추정 방법: 발행 매수(1등 1매당 500만 매, 스피또500은 400만 매) 중 판매된 비율을 3등 당첨 비율로 추정(입고율 이내)하고,
+          남은 잔여 당첨권이 아직 팔리지 않은 복권에 고르게 섞여 있다고 가정합니다. 3등은 판매 추정의 기준이라 공식 확률과 같게 나옵니다.
+          출처: 동행복권 즉석식 복권 발행내역.
         </p>
       </div>
 
@@ -227,6 +230,12 @@
               <button data-g="SP1000">스피또1000</button><button data-g="SP2000" class="active">스피또2000</button><button data-g="SP500">스피또500</button>
             </div>
           </div>
+          <div class="sp-mode">
+            <span class="lbl">확률 기준</span>
+            <div class="seg" id="spModeSel"><button data-m="base" class="active">공식 당첨 구조</button><button data-m="live">현재 회차 잔여 반영</button></div>
+            <select id="spRoundSel" hidden aria-label="회차 선택"></select>
+          </div>
+          <p class="hint sp-mode-info" id="spModeInfo"></p>
           <div class="ticket-wrap" id="ticketWrap"></div>
           <div class="sp-actions">
             <button class="btn primary" id="spBuy">1장 사서 긁기</button>
