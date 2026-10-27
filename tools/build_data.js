@@ -15,9 +15,9 @@ const src = path.join(root, 'data', 'lotto_draws.json');
 const dst = path.join(root, 'data', 'lotto_data.js');
 
 const json = JSON.parse(fs.readFileSync(src, 'utf8').replace(/^﻿/, ''));
-// 용량을 줄이기 위해 [회차, 날짜, n1..n6, 보너스] 배열로 압축
+// 용량을 줄이기 위해 [회차, 날짜, n1..n6, 보너스, 1등 1인 당첨금, 1등 당첨자 수, 총 판매액] 배열로 압축
 const rows = json.draws
-  .map(d => [d.draw_no, d.date, ...d.numbers, d.bonus])
+  .map(d => [d.draw_no, d.date, ...d.numbers, d.bonus, d.first_prize || 0, d.first_winners || 0, d.total_sales || 0])
   .sort((a, b) => a[0] - b[0]);
 
 const out =

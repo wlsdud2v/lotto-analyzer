@@ -22,6 +22,7 @@
     sort: { key: 'n', asc: true },
     app: 'lotto',
     tc: { loading: false, data: null, period: 0, histN: 15, list: [] },
+    pr: { sort: { key: 'no', asc: false }, n: 20 },
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
     sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false, status: null, mode: 'base', round: null },
@@ -100,6 +101,8 @@
     renderResults();
     renderSaved();
     renderCheck();
+    renderJackpot();
+    renderPrizeTab();
     if (state.tc.data && state.tc.data.next_round < draws[draws.length - 1].no + 1) state.tc.data = null;
     if (typeof state.app !== 'undefined') onViewChanged();
   }
@@ -306,6 +309,140 @@
     if (state.machine.m) state.machine.m.setVisible(state.app === 'lotto' && activeTab('lotto') === 'machine');
     if (state.app === 'speetto') onSpeettoShown();
     if (state.app === 'lotto' && activeTab('lotto') === 'teachers') onTeachersShown();
+  }
+
+
+  // ───────────────────────── 1등 당첨금 ─────────────────────────
+
+  const J = () => LottoJackpot;
+
+
+  /** 다음 추첨 시각: 마지막 회차 + 7일 토요일 20:35 (KST) */
+  function nextDrawTime() {
+    const last = state.allDraws[state.allDraws.length - 1];
+    const [y, m, d] = last.date.split('-').map(Number);
+    return Date.UTC(y, m - 1, d + 7, 11, 35);     // 20:35 KST = 11:35 UTC
+  }
+
+
+  function updateCountdown() {
+    const el = $('#jpCount');
+    if (!el || !state.allDraws.length) return;
+    const ms = nextDrawTime() - Date.now();
+    if (ms <= 0) { el.textContent = '추첨이 끝났습니다 · 결과 반영을 기다리는 중'; return; }
+    const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, mi = Math.floor(ms / 6e4) % 60;
+    el.textContent = `추첨까지 ${d ? d + '일 ' : ''}${h}시간 ${mi}분`;
+  }
+
+
+  function renderJackpot() {
+    const box = $('#jackpot');
+    const e = typeof LottoJackpot !== 'undefined' && J().estimate(state.allDraws);
+    if (!e) { box.hidden = true; return; }
+    box.hidden = false;
+    const last = state.allDraws[state.allDraws.length - 1];
+    $('#jpRound').textContent = `${e.round}회 (${addDays(last.date, 7)})`;
+    $('#jpAmount').textContent = J().eok(e.perPerson);
+    $('#jpSub').innerHTML = `1등 총 당첨금 약 <b>${J().eok(e.pool, 0)}원</b> ÷ 최근 1년 평균 당첨자 <b>${e.roundedWinners}명</b> 기준 · 세전`
+      + (e.carry ? ` · <b>이월금 약 ${J().eok(e.carry, 0)}원 포함</b>` : '');
+    $('#jpScen').innerHTML = e.scenarios.map(x => `<div class="${x.winners === e.roundedWinners ? 'on' : ''}">1등 ${x.winners}명이면<b>${J().eok(x.each)}원</b></div>`).join('');
+    $('#jpNote').textContent = `예상 판매액(직전 4회 평균) ${J().eok(e.sales, 0)}원 × 1등 배분율 ${(e.ratio * 100).toFixed(1)}%(최근 2년 중앙값)${e.carry ? ' + 이월금' : ''}. 최근 1년 1등 당첨자는 회차당 ${e.minW}~${e.maxW}명이었습니다.`;
+    updateCountdown();
+  }
+
+
+  /** 단일 계열 막대 차트 (SVG + 마우스 툴팁) */
+  function barChart(el, items, { labelEvery = 1, ariaLabel = '' } = {}) {
+    const W = 900, H = 230, L = 46, R = 8, T = 12, B = 26;
+    // 깔끔한 눈금 (1·2·2.5·5 × 10^k)
+    const top = Math.max(...items.map(x => x.value)) || 1;
+    const raw = top / 4, pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    const tick = [1, 2, 2.5, 5, 10].map(m => m * pow).find(v => v >= raw);
+    const ticks = Math.ceil(top / tick);
+    const max = tick * ticks;
+    const step = (W - L - R) / items.length;
+    const bw = Math.max(2, step * 0.72);
+    const y = v => T + (H - T - B) * (1 - v / max);
+    let grid = '';
+    for (let i = 0; i <= ticks; i++) {
+      const v = tick * i;
+      grid += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v ? J().eok(v, 0) : '0'}</text>`;
+    }
+    const bars = items.map((it, i) => {
+      const x = L + i * step + (step - bw) / 2;
+      const h = Math.max(0, y(0) - y(it.value));
+      const r = Math.min(4, bw / 2, h);
+      const yt = y(it.value);
+      // 위쪽만 둥근 막대 (바닥에 붙음)
+      const path = h > 0 ? `M${x},${y(0)}V${yt + r}Q${x},${yt} ${x + r},${yt}H${x + bw - r}Q${x + bw},${yt} ${x + bw},${yt + r}V${y(0)}Z` : '';
+      const lab = i % labelEvery === 0 ? `<text class="ax" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${it.label}</text>` : '';
+      return `<path class="bar" d="${path}"/><rect class="hit-area" data-i="${i}" x="${L + i * step}" y="${T}" width="${step}" height="${H - T - B}"/>${lab}`;
+    }).join('');
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}">${grid}${bars}</svg><div class="viz-tip"></div>`;
+    const tip = el.querySelector('.viz-tip');
+    el.querySelector('svg').addEventListener('pointermove', ev => {
+      const hit = ev.target.closest('.hit-area');
+      el.querySelectorAll('.bar.hover').forEach(b => b.classList.remove('hover'));
+      if (!hit) { tip.classList.remove('show'); return; }
+      const it = items[+hit.dataset.i];
+      hit.previousElementSibling.classList.add('hover');
+      const box = el.getBoundingClientRect();
+      tip.innerHTML = it.tip;
+      tip.style.left = Math.min(Math.max(ev.clientX - box.left, 70), box.width - 70) + 'px';
+      tip.style.top = (ev.clientY - box.top) + 'px';
+      tip.classList.add('show');
+    });
+    el.querySelector('svg').addEventListener('pointerleave', () => {
+      tip.classList.remove('show');
+      el.querySelectorAll('.bar.hover').forEach(b => b.classList.remove('hover'));
+    });
+  }
+
+
+  function renderPrizeTab() {
+    if (typeof LottoJackpot === 'undefined') return;
+    const h = J().history(state.allDraws);
+    if (!h) { $('#prKpis').innerHTML = '<p class="empty">이 데이터에는 당첨금 정보가 없습니다.</p>'; return; }
+    const E = J().eok;
+    $('#prKpis').innerHTML = `
+      <div class="kpi"><div class="k">역대 최고 1인 당첨금</div><div class="v">${E(h.max.prize)}원</div><div class="s">${h.max.no}회 (${h.max.date}) · ${h.max.winners}명</div></div>
+      <div class="kpi"><div class="k">역대 최저 1인 당첨금</div><div class="v">${E(h.min.prize)}원</div><div class="s">${h.min.no}회 (${h.min.date}) · ${h.min.winners}명</div></div>
+      <div class="kpi"><div class="k">최근 52주 평균 1인 당첨금</div><div class="v">${E(h.recentAvg)}원</div><div class="s">회차당 평균 1등 ${h.recentWinners.toFixed(1)}명</div></div>
+      <div class="kpi"><div class="k">1등 없이 이월된 회차</div><div class="v">${h.rollovers.length}회</div><div class="s">${h.rollovers.length ? '최근 ' + h.rollovers.slice(-3).map(d => d.no + '회').join(', ') : '-'}</div></div>`;
+
+    barChart($('#prYears'), h.years.map(y => ({
+      label: "'" + y.year.slice(2), value: y.avg,
+      tip: `<b>${y.year}년</b> 평균 1인 <b>${E(y.avg)}원</b> · 1등 평균 ${y.winners.toFixed(1)}명 · ${y.rounds}회`,
+    })), { ariaLabel: '연도별 평균 1등 1인 당첨금' });
+
+    const recent = state.allDraws.slice(-52);
+    barChart($('#prRecent'), recent.map(d => ({
+      label: String(d.no), value: d.winners ? d.prize : 0,
+      tip: d.winners ? `<b>${d.no}회</b> (${d.date}) 1인 <b>${E(d.prize)}원</b> · ${d.winners}명` : `<b>${d.no}회</b> 1등 없음 (이월)`,
+    })), { labelEvery: 6, ariaLabel: '최근 52회 1등 1인 당첨금' });
+
+    renderPrizeTable();
+  }
+
+
+  const PR_COLS = [
+    { key: 'no', label: '회차' }, { key: 'date', label: '추첨일' }, { key: 'prize', label: '1인 당첨금' },
+    { key: 'winners', label: '당첨자' }, { key: 'pool', label: '1등 총액' }, { key: 'sales', label: '총 판매액' },
+  ];
+
+
+  function renderPrizeTable() {
+    const rows = state.allDraws.filter(d => d.winners != null).map(d => ({ ...d, pool: d.prize * d.winners }));
+    const { key, asc } = state.pr.sort;
+    rows.sort((a, b) => (key === 'date' ? a.no - b.no : (a[key] - b[key]) || (a.no - b.no)) * (asc ? 1 : -1));
+    const n = Math.min(state.pr.n, rows.length);
+    const E = J().eok;
+    $('#prTable').innerHTML = `<thead><tr>${PR_COLS.map(c => `<th data-k="${c.key}" class="${c.key === key ? 'sorted' + (asc ? ' asc' : '') : ''}">${c.label}</th>`).join('')}</tr></thead><tbody>` +
+      rows.slice(0, n).map(d => `<tr>
+        <td>${d.no}회</td><td>${d.date}</td>
+        ${d.winners ? `<td title="${fmt(d.prize)}원"><b>${E(d.prize)}원</b></td><td>${d.winners}명</td><td>${E(d.pool, 0)}원</td>` : '<td class="roll">이월</td><td class="roll">0명</td><td class="roll">-</td>'}
+        <td>${d.sales ? E(d.sales, 0) + '원' : '-'}</td></tr>`).join('') + '</tbody>';
+    $('#prMore').hidden = n >= rows.length;
   }
 
 
@@ -1293,6 +1430,15 @@
       renderTcRank();
     });
     $('#tcMore').addEventListener('click', () => { state.tc.histN += 15; renderTcHist(); });
+    $('#prMore').addEventListener('click', () => { state.pr.n += 30; renderPrizeTable(); });
+    $('#prTable').addEventListener('click', e => {
+      const th = e.target.closest('th[data-k]');
+      if (!th) return;
+      const k = th.dataset.k;
+      state.pr.sort = { key: k, asc: state.pr.sort.key === k ? !state.pr.sort.asc : false };
+      renderPrizeTable();
+    });
+    setInterval(updateCountdown, 30000);
     $('#machineHistory').addEventListener('click', onSetAction(() => state.machine.history, () => '물리 추첨기 번호'));
 
     $('#saved').addEventListener('click', e => {

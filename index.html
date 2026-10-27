@@ -42,6 +42,20 @@
 
   <main class="wrap">
   <div class="app active" id="app-lotto">
+    <!-- ───────────── 이번 회차 예상 1등 당첨금 ───────────── -->
+    <section class="jackpot" id="jackpot" hidden>
+      <div class="jp-main">
+        <div class="jp-label"><b id="jpRound"></b> 예상 1등 당첨금</div>
+        <div class="jp-amount"><span class="jp-pre">1인당 약</span> <span id="jpAmount"></span><span class="jp-won">원</span></div>
+        <div class="jp-sub" id="jpSub"></div>
+      </div>
+      <div class="jp-side">
+        <div class="jp-count" id="jpCount"></div>
+        <div class="jp-scen" id="jpScen"></div>
+        <div class="jp-note" id="jpNote"></div>
+      </div>
+    </section>
+
     <section class="range-bar card">
       <label>분석 범위
         <select id="rangeSel">
@@ -69,6 +83,7 @@
       <button class="tab" data-tab="tarot" role="tab">타로 추천<span class="ribbon hot">HOT</span></button>
       <button class="tab" data-tab="machine" role="tab">추첨기<span class="ribbon new">NEW</span></button>
       <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
+      <button class="tab" data-tab="prize" role="tab">1등 당첨금</button>
       <button class="tab" data-tab="check" role="tab">내 번호 확인</button>
     </nav>
 
@@ -277,6 +292,37 @@
       </div>
     </section>
 
+    <!-- ───────────── 1등 당첨금 ───────────── -->
+    <section class="panel" id="tab-prize">
+      <div class="kpis" id="prKpis"></div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>연도별 평균 1등 당첨금 (1인)</h2>
+          <span class="hint">1등이 나온 회차 기준 · 막대에 마우스를 올리면 자세히</span>
+        </div>
+        <div class="chart viz" id="prYears"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>최근 52회 1등 당첨금 (1인)</h2>
+          <span class="hint">빈 칸은 1등이 없어 이월된 회차</span>
+        </div>
+        <div class="chart viz" id="prRecent"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>역대 1등 당첨금</h2>
+          <span class="hint">머리글을 누르면 정렬됩니다 · 금액은 세전</span>
+        </div>
+        <div class="table-wrap"><table class="stats-table" id="prTable"></table></div>
+        <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="prMore">더 보기</button></div>
+        <p class="note">출처: 동행복권 회차별 당첨 결과(smok95/lotto 공개 데이터). 1등 당첨금은 세전 금액이며, 실수령액은 3억 원 초과분 33%·이하 22% 세금을 뺀 금액입니다.</p>
+      </div>
+    </section>
+
     <!-- ───────────── 내 번호 확인 ───────────── -->
     <section class="panel" id="tab-check">
       <div class="card">
@@ -380,6 +426,7 @@
   <script src="js/drum.js"></script>
   <script src="js/speetto.js"></script>
   <script src="js/teachers.js"></script>
+  <script src="js/jackpot.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

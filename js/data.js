@@ -5,8 +5,12 @@
  */
 const LottoData = (() => {
 
+  /** 1등 당첨금 정보 (없으면 null) */
+  const money = (prize, winners, sales) => (winners == null && prize == null ? {} : { prize: +prize || 0, winners: +winners || 0, sales: +sales || 0 });
+
+
   function fromRows(rows) {
-    return rows.map(r => ({ no: +r[0], date: r[1], nums: r.slice(2, 8).map(Number).sort((a, b) => a - b), bonus: +r[8] }));
+    return rows.map(r => ({ no: +r[0], date: r[1], nums: r.slice(2, 8).map(Number).sort((a, b) => a - b), bonus: +r[8], ...money(r[9], r[10], r[11]) }));
   }
 
 
@@ -19,6 +23,10 @@ const LottoData = (() => {
       date: String(d.date ?? d.drwNoDate ?? '').slice(0, 10),
       nums: (d.numbers ?? d.nums ?? [d.drwtNo1, d.drwtNo2, d.drwtNo3, d.drwtNo4, d.drwtNo5, d.drwtNo6]).map(Number).sort((a, b) => a - b),
       bonus: +(d.bonus ?? d.bonus_no ?? d.bnusNo ?? 0),
+      ...money(
+        d.first_prize ?? d.prize ?? (d.divisions && d.divisions[0] ? d.divisions[0].prize : d.firstWinamnt),
+        d.first_winners ?? d.winners ?? (d.divisions && d.divisions[0] ? d.divisions[0].winners : d.firstPrzwnerCo),
+        d.total_sales ?? d.sales ?? d.total_sales_amount ?? d.totSellamnt),
     }));
   }
 
@@ -30,7 +38,7 @@ const LottoData = (() => {
     for (const line of lines) {
       const c = line.split(',').map(s => s.trim());
       if (!/^\d+$/.test(c[0])) continue;   // 헤더 등 건너뜀
-      out.push({ no: +c[0], date: c[1], nums: c.slice(2, 8).map(Number).sort((a, b) => a - b), bonus: +c[8] });
+      out.push({ no: +c[0], date: c[1], nums: c.slice(2, 8).map(Number).sort((a, b) => a - b), bonus: +c[8], ...(c.length > 9 ? money(c[9], c[10], c[11]) : {}) });
     }
     return out;
   }
@@ -60,7 +68,7 @@ const LottoData = (() => {
 
   function writeStored(draws, source) {
     try {
-      const rows = draws.map(d => [d.no, d.date, ...d.nums, d.bonus]);
+      const rows = draws.map(d => [d.no, d.date, ...d.nums, d.bonus, d.prize || 0, d.winners || 0, d.sales || 0]);
       localStorage.setItem(STORE_KEY, JSON.stringify({ source, rows }));
     } catch (e) { /* 저장 공간 부족 등 — 이번 실행에서만 사용 */ }
   }
@@ -83,7 +91,14 @@ const LottoData = (() => {
     const stored = readStored();
     if (stored) candidates.push(stored);
     if (!candidates.length) throw new Error('데이터 파일을 찾을 수 없습니다. 상단의 "데이터 불러오기"로 JSON/CSV 파일을 선택하세요.');
-    return candidates.reduce((a, b) => (latestNo(b) > latestNo(a) ? b : a));
+    const best = candidates.reduce((a, b) => (latestNo(b) > latestNo(a) ? b : a));
+    // 예전에 저장된 데이터에는 당첨금 정보가 없을 수 있어 다른 후보에서 채움
+    const money = new Map();
+    for (const c of candidates) for (const d of c.draws) if (d.winners != null && !money.has(d.no)) money.set(d.no, d);
+    for (const d of best.draws) {
+      if (d.winners == null && money.has(d.no)) { const m = money.get(d.no); d.prize = m.prize; d.winners = m.winners; d.sales = m.sales; }
+    }
+    return best;
   }
 
 

@@ -42,12 +42,18 @@ const LottoUpdater = (() => {
   const getJson = url => getText(url).then(t => JSON.parse(t));
 
 
-  const toDraw = d => ({
-    no: +d.draw_no,
-    date: String(d.date).slice(0, 10),
-    nums: d.numbers.map(Number).sort((a, b) => a - b),
-    bonus: +d.bonus_no,
-  });
+  const toDraw = d => {
+    const first = (d.divisions && d.divisions[0]) || {};
+    return {
+      no: +d.draw_no,
+      date: String(d.date).slice(0, 10),
+      nums: d.numbers.map(Number).sort((a, b) => a - b),
+      bonus: +d.bonus_no,
+      prize: first.winners ? +first.prize : 0,
+      winners: +first.winners || 0,
+      sales: +d.total_sales_amount || 0,
+    };
+  };
 
 
   /** 다음 추첨(마지막 회차 +7일 토요일 21:00 KST = 12:00 UTC)이 지났는가 */
