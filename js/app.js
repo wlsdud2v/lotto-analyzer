@@ -24,6 +24,7 @@
     tc: { loading: false, data: null, period: 0, histN: 15, list: [] },
     pr: { sort: { key: 'no', asc: false }, n: 20 },
     official: null,
+    fortune: { saju: null, list: [] },
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
     sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false, status: null, mode: 'base', round: null },
@@ -281,7 +282,9 @@
 
   // ───────────────────────── 프로그램 전환 ─────────────────────────
 
-  const APP_TITLES = { lotto: '로또 번호 분석기', speetto: '스피또 시뮬레이터' };
+  const APP_TITLES = { lotto: '로또 번호 분석기', speetto: '스피또 시뮬레이터', fortune: '사주 운세' };
+  const APP_IDS = Object.keys(APP_TITLES);
+  const appFromHash = () => { const h = location.hash.replace('#', ''); return APP_IDS.includes(h) && h !== 'lotto' ? h : null; };
 
 
   function setApp(id, user) {
@@ -297,7 +300,7 @@
     document.title = APP_TITLES[id];
     if (user) {
       try { localStorage.setItem('lotto.app', id); } catch (e) { /* 무시 */ }
-      try { history.replaceState(null, '', id === 'speetto' ? '#speetto' : location.pathname + location.search); } catch (e) { /* 무시 */ }
+      try { history.replaceState(null, '', id === 'lotto' ? location.pathname + location.search : '#' + id); } catch (e) { /* 무시 */ }
       window.scrollTo({ top: 0 });
     }
     onViewChanged();
@@ -310,6 +313,206 @@
     if (state.machine.m) state.machine.m.setVisible(state.app === 'lotto' && activeTab('lotto') === 'machine');
     if (state.app === 'speetto') onSpeettoShown();
     if (state.app === 'lotto' && activeTab('lotto') === 'teachers') onTeachersShown();
+    if (state.app === 'fortune') renderToday();
+  }
+
+
+  // ───────────────────────── 운세 · 사주팔자 ─────────────────────────
+
+  const SJ = () => LottoSaju;
+  const SAJU_KEY = 'lotto.saju.v1';
+
+
+  function initFortune() {
+    if (typeof LottoSaju === 'undefined') return;
+    $('#sjCity').innerHTML = SJ().CITIES.map(c => `<option value="${c.id}">${c.name}${c.lon != null ? ` (동경 ${c.lon}°)` : ''}</option>`).join('');
+    $('#sjDate').max = new Date().toISOString().slice(0, 10);
+    $('#sjGender').addEventListener('click', e => {
+      const b = e.target.closest('button[data-g]');
+      if (!b) return;
+      $$('#sjGender button').forEach(x => x.classList.toggle('active', x === b));
+    });
+    $('#sjTimeUnknown').addEventListener('change', e => { $('#sjTime').disabled = e.target.checked; });
+    $('#sjForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const input = readSajuForm();
+      if (!input) { toast('생년월일을 입력해 주세요.'); return; }
+      try {
+        if ($('#sjRemember').checked) localStorage.setItem(SAJU_KEY, JSON.stringify(input));
+        else localStorage.removeItem(SAJU_KEY);
+      } catch (err) { /* 저장 불가 — 이번에만 사용 */ }
+      runSaju(input, true);
+    });
+    $('#todayResult').addEventListener('click', e => {
+      const go = e.target.closest('[data-goto-saju]');
+      if (go) { document.querySelector('#app-fortune .tab[data-tab="saju"]').click(); return; }
+    });
+    // 기억해 둔 정보 복원
+    try {
+      const saved = JSON.parse(localStorage.getItem(SAJU_KEY));
+      if (saved && saved.y) { fillSajuForm(saved); runSaju(saved, false); }
+    } catch (err) { /* 없음 */ }
+  }
+
+
+  function readSajuForm() {
+    const date = $('#sjDate').value;
+    if (!date) return null;
+    const [y, m, d] = date.split('-').map(Number);
+    const unknown = $('#sjTimeUnknown').checked;
+    const [h, mi] = ($('#sjTime').value || '12:00').split(':').map(Number);
+    return {
+      gender: $('#sjGender button.active').dataset.g, y, m, d,
+      h: unknown ? 12 : h, mi: unknown ? 0 : mi, timeUnknown: unknown,
+      city: $('#sjCity').value, zasi: $('#sjZasi').value,
+    };
+  }
+
+
+  function fillSajuForm(i) {
+    $$('#sjGender button').forEach(x => x.classList.toggle('active', x.dataset.g === i.gender));
+    $('#sjDate').value = `${i.y}-${String(i.m).padStart(2, '0')}-${String(i.d).padStart(2, '0')}`;
+    $('#sjTime').value = `${String(i.h).padStart(2, '0')}:${String(i.mi).padStart(2, '0')}`;
+    $('#sjTimeUnknown').checked = !!i.timeUnknown;
+    $('#sjTime').disabled = !!i.timeUnknown;
+    $('#sjCity').value = i.city || 'seoul';
+    $('#sjZasi').value = i.zasi || 'early';
+  }
+
+
+  function runSaju(input, scroll) {
+    const r = SJ().compute(input);
+    state.fortune.saju = r;
+    renderSaju(r);
+    renderToday();
+    if (scroll) $('#sjResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+
+  const gzH = p => SJ().STEMS_H[p.s] + SJ().BRANCHES_H[p.b];
+  const gzK = p => SJ().STEMS[p.s] + SJ().BRANCHES[p.b];
+
+
+  function renderSaju(r) {
+    const S = SJ();
+    const P = r.pillars, dm = r.dayMaster;
+    const i = r.input;
+    const pad = n => String(n).padStart(2, '0');
+    const tzNote = r.offsetMin !== 540 ? ` · 당시 표준시 UTC+${Math.floor(r.offsetMin / 60)}${r.offsetMin % 60 ? ':' + pad(r.offsetMin % 60) : ''}${r.offsetMin >= 600 || r.offsetMin === 570 ? ' (서머타임)' : ''}` : '';
+    const corrected = i.timeUnknown ? '' : r.city.lon != null ? ` → ${r.city.name} 태양시 ${pad(r.local.h)}:${pad(r.local.mi)}` : '';
+    const age = new Date().getFullYear() - i.y + 1;
+
+    const col = (key, label) => {
+      const p = P[key];
+      if (!p) {
+        return `<div class="sj-col"><div class="ph">${label}</div><div class="god">&nbsp;</div>
+          <div class="sj-ch empty"><div class="h">?</div><div class="k">시간 모름</div></div>
+          <div class="sj-ch empty"><div class="h">?</div><div class="k">&nbsp;</div></div><div class="god">&nbsp;</div></div>`;
+      }
+      const se = S.STEM_EL[p.s], be = S.BRANCH_EL[p.b];
+      const me = key === 'day';
+      return `<div class="sj-col"><div class="ph">${label}</div>
+        <div class="god ${me ? 'me' : ''}">${me ? '나 (일간)' : S.tenGod(dm, p.s)}</div>
+        <div class="sj-ch el-${se} ${me ? 'me' : ''}"><div class="h">${S.STEMS_H[p.s]}</div><div class="k">${S.STEMS[p.s]} · ${S.ELEMENTS[se]}</div></div>
+        <div class="sj-ch el-${be}"><div class="h">${S.BRANCHES_H[p.b]}</div><div class="k">${S.BRANCHES[p.b]} · ${S.ELEMENTS[be]}</div></div>
+        <div class="god">${S.tenGod(dm, S.BRANCH_MAIN_STEM[p.b])}${key === 'hour' ? `<div class="sj-time">${S.HOUR_RANGES[p.b]}</div>` : ''}</div></div>`;
+    };
+
+    const total = r.counts.reduce((a, b) => a + b, 0);
+    const elRows = r.counts.map((c, e) => `<div class="row el-${e}"><b>${S.ELEMENTS[e]} ${S.ELEMENTS_H[e]}</b>
+      <div class="bar"><i style="width:${total ? c / total * 100 : 0}%"></i></div><span class="n">${c}개</span></div>`).join('');
+    const missing = r.counts.map((c, e) => (c ? null : S.ELEMENTS[e])).filter(Boolean);
+
+    const dmEl = S.STEM_EL[dm];
+    const lk = S.ELEMENT_LUCK[r.lucky];
+
+    // 원국에 나온 십신
+    const gods = new Set();
+    for (const [k, p] of Object.entries(P)) {
+      if (!p) continue;
+      if (k !== 'day') gods.add(S.tenGod(dm, p.s));
+      gods.add(S.tenGod(dm, S.BRANCH_MAIN_STEM[p.b]));
+    }
+
+    const dwNow = r.daewoon.list.findIndex((d, k, arr) => age >= d.age && (k === arr.length - 1 || age < arr[k + 1].age));
+
+    $('#sjResult').innerHTML = `
+      <div class="card">
+        <div class="card-head"><h2>사주팔자 원국</h2><span class="hint">${r.sajuYear}년 ${r.animal}띠 · ${gzK(P.year)}년 ${gzK(P.month)}월 ${gzK(P.day)}일${P.hour ? ' ' + gzK(P.hour) + '시' : ''}</span></div>
+        <p class="sj-meta">양력 <b>${i.y}년 ${i.m}월 ${i.d}일 ${i.timeUnknown ? '(시간 모름)' : pad(i.h) + ':' + pad(i.mi)}</b> · ${i.gender === 'M' ? '남자' : '여자'}${tzNote}${corrected}${!i.timeUnknown && i.zasi === 'late' ? ' · 야자시 적용' : ''}</p>
+        <div class="sj-table">${col('hour', '시주')}${col('day', '일주')}${col('month', '월주')}${col('year', '년주')}</div>
+      </div>
+
+      <div class="sj-grid2">
+        <div class="card sj-dm el-${dmEl}">
+          <h2>나의 일간</h2>
+          <h3><span class="h">${S.STEMS_H[dm]}${S.ELEMENTS_H[dmEl]}</span> ${S.STEMS[dm]}${S.ELEMENTS[dmEl]}</h3>
+          <p>${S.DAY_MASTER_TEXT[dm]}</p>
+          <div><span class="sj-tag">${r.strong ? '신강 — 기운이 강한 편' : '신약 — 기운이 약한 편'}</span><span class="sj-tag">${r.animal}띠</span></div>
+          <div class="sj-lucky el-${r.lucky}">
+            <div><span>행운의 오행</span><b>${S.ELEMENTS[r.lucky]}(${S.ELEMENTS_H[r.lucky]})</b></div>
+            <div><span>행운의 색</span>${lk.color}</div>
+            <div><span>행운의 숫자</span>${lk.nums}</div>
+            <div><span>행운의 방향</span>${lk.dir}</div>
+            <div style="grid-column:1/-1"><span>도움 되는 습관</span>${lk.tip}</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>오행 분포</h2>
+          <div class="sj-el">${elRows}</div>
+          <p class="note">${missing.length ? `<b>${missing.join('·')}</b> 기운이 없어 보완하면 좋습니다. ` : '다섯 기운이 모두 들어 있습니다. '}${r.strong ? '나를 돕는 기운이 많아 힘을 밖으로 쓰는 것이 좋습니다.' : '나를 돕는 기운이 적어 도움을 받는 것이 좋습니다.'} (간단 판정)</p>
+          <h2 style="margin-top:16px">원국의 십신</h2>
+          <div class="sj-gods">${[...gods].map(g => `<div><b>${g}</b>${S.TEN_GOD_TEXT[g]}</div>`).join('')}</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-head"><h2>대운 (10년 운의 흐름)</h2><span class="hint">${r.daewoon.forward ? '순행' : '역행'} · ${r.daewoon.startAge}세 시작 (${r.daewoon.term.name}까지 ${r.daewoon.term.days.toFixed(1)}일 ÷ 3)</span></div>
+        <div class="sj-dw">${r.daewoon.list.map((d, k) => `<div class="c ${k === dwNow ? 'now' : ''}">
+          <div class="age">${d.age}세~</div><div class="h"><span class="el-${S.STEM_EL[d.s]}" style="color:var(--c)">${S.STEMS_H[d.s]}</span><span class="el-${S.BRANCH_EL[d.b]}" style="color:var(--c)">${S.BRANCHES_H[d.b]}</span></div>
+          <div class="g">${S.tenGod(dm, d.s)}</div></div>`).join('')}</div>
+        <p class="note">테두리 표시는 올해 나이(${age}세, 세는나이) 기준 현재 대운입니다. 절기 시각은 천문 계산(VSOP87)으로 구해 공식 발표와 1분 안팎으로 맞습니다.</p>
+      </div>`;
+  }
+
+
+  function renderToday() {
+    const el = $('#todayResult');
+    if (!el) return;
+    const r = state.fortune.saju;
+    if (!r) {
+      el.innerHTML = `<div class="card"><p class="empty">먼저 <b>사주팔자</b> 탭에서 생년월일시를 입력해 주세요.<br><br><button class="btn primary" data-goto-saju>사주 입력하러 가기</button></p></div>`;
+      return;
+    }
+    const S = SJ();
+    const t = S.daily(r, Date.now());
+    const lk = S.ELEMENT_LUCK[r.lucky];
+    const stars = '★'.repeat(t.score) + '☆'.repeat(5 - t.score);
+    let numsHtml = '';
+    state.fortune.list = [];
+    if (state.allDraws.length && typeof LottoEngine !== 'undefined') {
+      const round = state.allDraws[state.allDraws.length - 1].no + 1;
+      const nums = S.luckyNumbers(LottoEngine, r, round);
+      state.fortune.list = [{ nums, fixed: [] }];
+      numsHtml = `<div class="card" style="margin-top:16px">
+        <div class="card-head"><h2>이번 주 사주 행운 번호 — ${round}회</h2><span class="hint">행운의 오행(${S.ELEMENTS[r.lucky]})에 맞는 번호에 가중치 · 이번 주 동안 고정</span></div>
+        <div class="set-list">${setRow(state.fortune.list[0], 0, setActions(0))}</div>
+        <p class="note">하도(河圖)의 오행 수(수 1·6, 화 2·7, 목 3·8, 금 4·9, 토 5·10)로 끝자리가 행운의 오행에 해당하는 번호를 더 자주 고릅니다. 재미로 즐겨 주세요.</p>
+      </div>`;
+    }
+    el.innerHTML = `<div class="card">
+        <div class="card-head"><h2>오늘의 운세</h2><span class="hint">${t.date.y}년 ${t.date.m}월 ${t.date.d}일 · ${S.STEMS[r.dayMaster]}${S.ELEMENTS[S.STEM_EL[r.dayMaster]]} 일간 기준</span></div>
+        <div class="td-head">
+          <div class="td-day"><span class="el-${S.STEM_EL[t.pillar.s]}" style="color:var(--c)">${S.STEMS_H[t.pillar.s]}</span><span class="el-${S.BRANCH_EL[t.pillar.b]}" style="color:var(--c)">${S.BRANCHES_H[t.pillar.b]}</span></div>
+          <div><div class="hint" style="margin:0">오늘 일진 ${gzK(t.pillar)}일 · 나에게 <b>${t.god}</b>의 날</div><div class="td-stars">${stars}</div></div>
+        </div>
+        <div class="td-total">${t.total}</div>
+        <div class="td-items">
+          <div><b>재물운</b>${t.money}</div><div><b>대인운</b>${t.people}</div><div><b>건강운</b>${t.health}</div>
+        </div>
+        ${t.note ? `<div class="td-note">${t.note}</div>` : ''}
+        <p class="note">오늘의 행운 — 색: ${lk.color} · 숫자: ${lk.nums} · 방향: ${lk.dir}</p>
+      </div>${numsHtml}`;
   }
 
 
@@ -1373,6 +1576,7 @@
   function bind() {
     initMachine();
     initSpeetto();
+    initFortune();
     // 탭: 각 프로그램(로또 / 스피또) 안에서만 전환
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       const app = t.closest('.app');
@@ -1391,10 +1595,10 @@
 
     // 상위 프로그램 전환: 로또 번호 분석기 / 스피또 시뮬레이터
     $$('.app-btn').forEach(b => b.addEventListener('click', () => setApp(b.dataset.app, true)));
-    window.addEventListener('hashchange', () => setApp(location.hash === '#speetto' ? 'speetto' : 'lotto', false));
-    let startApp = location.hash === '#speetto' ? 'speetto' : null;
+    window.addEventListener('hashchange', () => setApp(appFromHash() || 'lotto', false));
+    let startApp = appFromHash();
     if (!startApp) { try { startApp = localStorage.getItem('lotto.app'); } catch (e) { /* 무시 */ } }
-    setApp(startApp === 'speetto' ? 'speetto' : 'lotto', false);
+    setApp(APP_IDS.includes(startApp) ? startApp : 'lotto', false);
 
     $('#rangeSel').addEventListener('change', e => { state.range = +e.target.value; refreshStats(); });
     $('#recentSel').addEventListener('change', e => { state.recentN = +e.target.value; refreshStats(); });
@@ -1472,6 +1676,7 @@
     refreshOfficial();
     setInterval(refreshOfficial, 10 * 60 * 1000);
     $('#machineHistory').addEventListener('click', onSetAction(() => state.machine.history, () => '물리 추첨기 번호'));
+    $('#todayResult').addEventListener('click', onSetAction(() => state.fortune.list, () => '사주 행운 번호'));
 
     $('#saved').addEventListener('click', e => {
       const b = e.target.closest('button[data-act]');
@@ -1543,6 +1748,7 @@
     startTarot();
     try {
       setData(await LottoData.loadDefault());
+      if (state.fortune.saju) renderToday();
     } catch (err) {
       $('#dataInfo').textContent = err.message;
       return;

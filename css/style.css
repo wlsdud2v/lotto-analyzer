@@ -556,3 +556,84 @@ input.num { width: 64px; text-align: center; }
 .viz-tip.show { opacity: 1; }
 .viz-tip b { font-weight: 900; }
 .stats-table td.roll { color: var(--muted); }
+
+/* ───────── 상위 전환: 짧은 이름 (휴대폰) ───────── */
+.app-btn .short { display: none; }
+@media (max-width: 560px) {
+  .app-btn .full { display: none; }
+  .app-btn .short { display: inline; }
+}
+
+/* ───────── 운세 · 사주팔자 ───────── */
+:root { --el0: #2e9e5b; --el1: #e0443a; --el2: #c99512; --el3: #8d98a5; --el4: #2c4a6b; }
+.sj-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 18px; align-items: end; margin-top: 10px; }
+.sj-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.sj-field .lbl { font-weight: 500; color: var(--muted); font-size: 13px; }
+.sj-field input[type=date], .sj-field input[type=time], .sj-field select { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; }
+.sj-row { display: flex; gap: 10px; align-items: center; }
+.sj-row input[type=time] { flex: 1; }
+.sj-submit { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+.sj-submit .btn { padding: 10px 22px; }
+
+.sj-meta { font-size: 13.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.6; }
+.sj-meta b { color: var(--text); }
+.sj-table { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-width: 640px; margin: 0 auto; }
+.sj-col { display: flex; flex-direction: column; gap: 6px; text-align: center; }
+.sj-col .ph { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.sj-col .god { font-size: 12px; color: var(--muted); min-height: 18px; }
+.sj-col .god.me { color: var(--accent); font-weight: 900; }
+.sj-ch { --c: var(--muted); border-radius: 12px; padding: 10px 4px 8px; background: color-mix(in srgb, var(--c) 14%, var(--surface)); border: 2px solid color-mix(in srgb, var(--c) 55%, transparent); }
+.sj-ch .h { font-family: "Noto Serif KR", "Batang", serif; font-size: 34px; font-weight: 700; line-height: 1.15; color: var(--c); }
+.sj-ch .k { font-size: 12.5px; color: var(--text); }
+.sj-ch.me { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.sj-ch.empty { --c: var(--line); }
+.sj-ch.empty .h { color: var(--muted); font-size: 22px; padding: 6px 0; }
+.sj-time { font-size: 11px; color: var(--muted); }
+.el-0 { --c: var(--el0); } .el-1 { --c: var(--el1); } .el-2 { --c: var(--el2); } .el-3 { --c: var(--el3); } .el-4 { --c: var(--el4); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --el4: #6f9bd1; --el3: #b9c2cc; } }
+
+.sj-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.sj-el { display: flex; flex-direction: column; gap: 8px; }
+.sj-el .row { display: grid; grid-template-columns: 54px 1fr 54px; align-items: center; gap: 10px; font-size: 14px; }
+.sj-el .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.sj-el .bar i { display: block; height: 100%; background: var(--c); border-radius: 6px; }
+.sj-el .row b { color: var(--c); }
+.sj-el .row .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.sj-dm h3 { margin: 0 0 6px; font-size: 18px; }
+.sj-dm h3 .h { font-family: "Noto Serif KR", serif; color: var(--c); margin-right: 4px; }
+.sj-dm p { margin: 0 0 10px; font-size: 14px; }
+.sj-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); margin-right: 4px; }
+.sj-lucky { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; font-size: 13.5px; margin-top: 8px; padding: 12px; border-radius: 10px; background: color-mix(in srgb, var(--c) 10%, var(--surface-2)); }
+.sj-lucky span { color: var(--muted); margin-right: 6px; }
+.sj-gods { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.sj-gods div { font-size: 12.5px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); }
+.sj-gods b { margin-right: 4px; }
+.sj-dw { display: grid; grid-template-columns: repeat(8, minmax(60px, 1fr)); gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.sj-dw .c { text-align: center; border-radius: 10px; padding: 8px 2px; background: var(--surface-2); border: 1px solid var(--line); }
+.sj-dw .c.now { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.sj-dw .age { font-size: 12px; color: var(--muted); }
+.sj-dw .h { font-family: "Noto Serif KR", serif; font-size: 20px; font-weight: 700; line-height: 1.3; }
+.sj-dw .h span { display: block; }
+.sj-dw .g { font-size: 11px; color: var(--muted); }
+
+/* 오늘의 운세 */
+.td-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.td-day { font-family: "Noto Serif KR", serif; font-size: 40px; font-weight: 700; }
+.td-stars { font-size: 22px; color: #e0a800; letter-spacing: 2px; }
+.td-total { font-size: 17px; font-weight: 700; margin: 10px 0 4px; }
+.td-items { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.td-items div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; }
+.td-items b { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
+.td-note { margin-top: 12px; font-size: 13.5px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); }
+
+@media (max-width: 900px) {
+  .sj-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sj-grid2 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .sj-form { grid-template-columns: minmax(0, 1fr); }
+  .sj-ch .h { font-size: 26px; }
+  .td-items { grid-template-columns: minmax(0, 1fr); }
+  .sj-lucky { grid-template-columns: minmax(0, 1fr); }
+}
+.sj-grid2 > .card { margin-top: 0; }

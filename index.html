@@ -23,11 +23,13 @@
       <div class="brand">
         <h1 class="sr-only" id="appTitle">로또 번호 분석기</h1>
         <div class="app-switch" role="tablist" aria-label="프로그램 선택">
-          <button class="app-btn active" data-app="lotto" role="tab" aria-selected="true">로또 번호 분석기</button>
-          <button class="app-btn" data-app="speetto" role="tab" aria-selected="false">스피또 시뮬레이터</button>
+          <button class="app-btn active" data-app="lotto" role="tab" aria-selected="true"><span class="full">로또 번호 분석기</span><span class="short">로또</span></button>
+          <button class="app-btn" data-app="speetto" role="tab" aria-selected="false"><span class="full">스피또 시뮬레이터</span><span class="short">스피또</span></button>
+          <button class="app-btn" data-app="fortune" role="tab" aria-selected="false"><span class="full">운세</span><span class="short">운세</span></button>
         </div>
         <p class="sub" id="dataInfo" data-for="lotto">데이터를 불러오는 중…</p>
         <p class="sub" data-for="speetto" hidden>동행복권 스피또1000·2000·500 발행 현황과 긁는 복권 시뮬레이터</p>
+        <p class="sub" data-for="fortune" hidden>생년월일시로 보는 사주팔자와 오늘의 운세 — 재미로 보는 전통 명리</p>
       </div>
       <div class="latest" id="latest" data-for="lotto"></div>
       <div class="top-actions" data-for="lotto">
@@ -415,6 +417,50 @@
       스피또 시뮬레이터는 재미와 참고용입니다. 즉석 복권의 기대 환급률은 약 56~60%로, 평균적으로 산 금액의 40% 이상은 돌아오지 않습니다.
     </footer>
   </div>
+  <div class="app" id="app-fortune">
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="saju" role="tab">사주팔자</button>
+      <button class="tab" data-tab="today" role="tab">오늘의 운세</button>
+    </nav>
+
+    <!-- ───────────── 운세: 사주팔자 ───────────── -->
+    <section class="panel active" id="tab-saju">
+      <div class="card">
+        <h2>생년월일시 입력</h2>
+        <form class="sj-form" id="sjForm" autocomplete="off">
+          <div class="sj-field">
+            <span class="lbl">성별</span>
+            <div class="seg" id="sjGender"><button type="button" data-g="M" class="active">남자</button><button type="button" data-g="F">여자</button></div>
+          </div>
+          <label class="sj-field"><span class="lbl">생년월일 (양력)</span><input type="date" id="sjDate" min="1900-01-01" max="2050-12-31" required></label>
+          <div class="sj-field">
+            <span class="lbl">태어난 시각</span>
+            <div class="sj-row"><input type="time" id="sjTime" value="12:00"><label class="check"><input type="checkbox" id="sjTimeUnknown"> 모름</label></div>
+          </div>
+          <label class="sj-field"><span class="lbl">태어난 지역 (경도 보정)</span><select id="sjCity"></select></label>
+          <label class="sj-field"><span class="lbl">자시 기준</span>
+            <select id="sjZasi"><option value="early">23시에 날짜가 바뀜 (일반)</option><option value="late">0시에 날짜가 바뀜 (야자시)</option></select>
+          </label>
+          <div class="sj-field sj-submit">
+            <label class="check"><input type="checkbox" id="sjRemember" checked> 이 기기에 기억하기</label>
+            <button class="btn primary" type="submit">사주 보기</button>
+          </div>
+        </form>
+        <p class="note">양력 생일로 입력하세요. 태어난 시각은 당시 한국 공식 시각 그대로 넣으면 과거 서머타임·표준시 변경이 자동 반영되고, 태어난 지역의 경도로 실제 태양시를 보정합니다(서울 약 −32분).
+          입력한 정보는 이 기기 안에서만 계산하며 어디로도 보내지 않습니다.</p>
+      </div>
+      <div id="sjResult"></div>
+    </section>
+
+    <!-- ───────────── 운세: 오늘의 운세 ───────────── -->
+    <section class="panel" id="tab-today">
+      <div id="todayResult"></div>
+    </section>
+
+    <footer class="foot">
+      사주와 운세는 전통 명리학에 바탕한 재미와 참고용 해석입니다. 중요한 결정은 스스로의 판단으로 내려 주세요.
+    </footer>
+  </div>
   </main>
 
   <div class="toast" id="toast"></div>
@@ -428,6 +474,7 @@
   <script src="js/speetto.js"></script>
   <script src="js/teachers.js"></script>
   <script src="js/jackpot.js"></script>
+  <script src="js/saju.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
