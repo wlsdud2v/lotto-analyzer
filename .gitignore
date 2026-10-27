@@ -4,3 +4,5 @@ _site/
 sp.log
 lotto.log
 tc.log
+jp.log
+data/jackpot.json

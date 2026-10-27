@@ -95,5 +95,43 @@ const LottoJackpot = (() => {
   }
 
 
-  return { estimate, history, eok };
+  // ───────────── 동행복권 발표값 (1등 예상 총 당첨금) ─────────────
+
+  const LIVE = {
+    amt: 'https://www.dhlottery.co.kr/lt645/selectRnk1ExpcAmt.do',
+    ths: 'https://www.dhlottery.co.kr/lt645/selectThsLt645Info.do',
+  };
+  const MIRROR = 'https://wlsdud2v.github.io/lotto-analyzer/data/jackpot.json';
+  const kst = s => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:${s.slice(12, 14) || '00'}+09:00`;
+
+
+  /**
+   * 앱: 동행복권에서 직접(실시간) → 웹: 같은 사이트 data/jackpot.json (매시간 갱신) → 사이트 사본.
+   * 실패하면 null (화면은 자체 추정으로 대체).
+   */
+  async function loadOfficial() {
+    const getText = typeof LottoUpdater !== 'undefined' ? LottoUpdater.getText : null;
+    if (window.AndroidBridge && window.AndroidBridge.fetchText && getText) {
+      try {
+        const amt = JSON.parse(await getText(`${LIVE.amt}?_=${Date.now()}`)).data.result;
+        const ths = JSON.parse(await getText(`${LIVE.ths}?_=${Date.now()}`)).data.result;
+        const d = ths.ltRflYmd;
+        return {
+          round: +ths.ltEpsd, live: true,
+          draw_date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`,
+          close_at: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${String(ths.ltRflHh).padStart(2, '0')}:${String(ths.ltRflMm).padStart(2, '0')}:00+09:00`,
+          expected_first_total: +amt.rnk1ExpcAmt, accumulated_sales: +amt.acmlRvnAmt, as_of: kst(String(amt.giveDt)),
+        };
+      } catch (e) { /* 사본으로 */ }
+    }
+    const tryJson = async url => {
+      try { const r = await fetch(url, { cache: 'no-cache' }); return r.ok ? await r.json() : null; } catch (e) { return null; }
+    };
+    let j = location.protocol.startsWith('http') ? await tryJson(`data/jackpot.json?_=${Date.now()}`) : null;
+    if (!j) j = await tryJson(`${MIRROR}?_=${Date.now()}`);
+    return j && j.expected_first_total > 0 ? { ...j, live: false } : null;
+  }
+
+
+  return { estimate, history, eok, loadOfficial };
 })();

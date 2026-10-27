@@ -23,6 +23,7 @@
     app: 'lotto',
     tc: { loading: false, data: null, period: 0, histN: 15, list: [] },
     pr: { sort: { key: 'no', asc: false }, n: 20 },
+    official: null,
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
     sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false, status: null, mode: 'base', round: null },
@@ -317,11 +318,21 @@
   const J = () => LottoJackpot;
 
 
-  /** 다음 추첨 시각: 마지막 회차 + 7일 토요일 20:35 (KST) */
+  /** 판매 마감 시각: 동행복권 발표값이 있으면 그 시각, 없으면 마지막 회차 + 7일 토요일 20:00 (KST) */
   function nextDrawTime() {
+    const o = state.official;
+    if (o && o.close_at && o.round === state.allDraws[state.allDraws.length - 1].no + 1) return Date.parse(o.close_at);
     const last = state.allDraws[state.allDraws.length - 1];
     const [y, m, d] = last.date.split('-').map(Number);
-    return Date.UTC(y, m - 1, d + 7, 11, 35);     // 20:35 KST = 11:35 UTC
+    return Date.UTC(y, m - 1, d + 7, 11, 0);      // 20:00 KST = 11:00 UTC
+  }
+
+
+  /** 동행복권 1등 예상 총 당첨금 불러오기 (10분마다 다시) */
+  async function refreshOfficial() {
+    if (typeof LottoJackpot === 'undefined') return;
+    const o = await LottoJackpot.loadOfficial();
+    if (o) { state.official = o; if (state.allDraws.length) renderJackpot(); }
   }
 
 
@@ -329,9 +340,9 @@
     const el = $('#jpCount');
     if (!el || !state.allDraws.length) return;
     const ms = nextDrawTime() - Date.now();
-    if (ms <= 0) { el.textContent = '추첨이 끝났습니다 · 결과 반영을 기다리는 중'; return; }
+    if (ms <= 0) { el.textContent = '판매 마감 · 추첨 결과를 기다리는 중'; return; }
     const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, mi = Math.floor(ms / 6e4) % 60;
-    el.textContent = `추첨까지 ${d ? d + '일 ' : ''}${h}시간 ${mi}분`;
+    el.textContent = `판매 마감까지 ${d ? d + '일 ' : ''}${h}시간 ${mi}분`;
   }
 
 
@@ -341,12 +352,31 @@
     if (!e) { box.hidden = true; return; }
     box.hidden = false;
     const last = state.allDraws[state.allDraws.length - 1];
+    const o = state.official && state.official.round === e.round ? state.official : null;
     $('#jpRound').textContent = `${e.round}회 (${addDays(last.date, 7)})`;
-    $('#jpAmount').textContent = J().eok(e.perPerson);
-    $('#jpSub').innerHTML = `1등 총 당첨금 약 <b>${J().eok(e.pool, 0)}원</b> ÷ 최근 1년 평균 당첨자 <b>${e.roundedWinners}명</b> 기준 · 세전`
-      + (e.carry ? ` · <b>이월금 약 ${J().eok(e.carry, 0)}원 포함</b>` : '');
     $('#jpScen').innerHTML = e.scenarios.map(x => `<div class="${x.winners === e.roundedWinners ? 'on' : ''}">1등 ${x.winners}명이면<b>${J().eok(x.each)}원</b></div>`).join('');
-    $('#jpNote').textContent = `예상 판매액(직전 4회 평균) ${J().eok(e.sales, 0)}원 × 1등 배분율 ${(e.ratio * 100).toFixed(1)}%(최근 2년 중앙값)${e.carry ? ' + 이월금' : ''}. 최근 1년 1등 당첨자는 회차당 ${e.minW}~${e.maxW}명이었습니다.`;
+    const finalNote = `마감 예상 = 직전 4회 평균 판매액 ${J().eok(e.sales, 0)}원 × 1등 배분율 ${(e.ratio * 100).toFixed(1)}%${e.carry ? ' + 이월금' : ''}. 최근 1년 1등 당첨자는 회차당 ${e.minW}~${e.maxW}명이었습니다.`;
+
+    if (o) {
+      // 동행복권 발표값 그대로
+      const asOf = new Date(o.as_of);
+      const t = `${asOf.getMonth() + 1}월 ${asOf.getDate()}일 ${String(asOf.getHours()).padStart(2, '0')}:${String(asOf.getMinutes()).padStart(2, '0')}`;
+      $('#jpTitle').textContent = '1등 예상 총 당첨금';
+      $('#jpPre').textContent = '';
+      $('#jpAmount').textContent = o.expected_first_total.toLocaleString('ko-KR');
+      $('#jpSub').innerHTML = `동행복권 발표 · ${t} 기준 (누적 판매액 <b>${J().eok(o.accumulated_sales, 0)}원</b>)${o.live ? ' · 실시간' : ''}<br>판매가 이어지는 동안 계속 늘어납니다 · 세전`;
+      $('#jpScenTitle').innerHTML = `판매 마감 시 예상 약 <b>${J().eok(e.pool, 0)}원</b> 기준 1인당`;
+      $('#jpNote').textContent = finalNote;
+    } else {
+      // 발표값을 못 받으면 자체 추정
+      $('#jpTitle').textContent = '예상 1등 당첨금 (자체 추정)';
+      $('#jpPre').textContent = '1인당 약';
+      $('#jpAmount').textContent = J().eok(e.perPerson);
+      $('#jpSub').innerHTML = `판매 마감 시 1등 총 당첨금 약 <b>${J().eok(e.pool, 0)}원</b> ÷ 최근 1년 평균 당첨자 <b>${e.roundedWinners}명</b> 기준 · 세전`
+        + (e.carry ? ` · <b>이월금 약 ${J().eok(e.carry, 0)}원 포함</b>` : '');
+      $('#jpScenTitle').innerHTML = '당첨자 수에 따라 1인당';
+      $('#jpNote').textContent = finalNote + ' 동행복권 발표값을 불러오지 못해 자체 추정으로 표시 중입니다.';
+    }
     updateCountdown();
   }
 
@@ -1439,6 +1469,8 @@
       renderPrizeTable();
     });
     setInterval(updateCountdown, 30000);
+    refreshOfficial();
+    setInterval(refreshOfficial, 10 * 60 * 1000);
     $('#machineHistory').addEventListener('click', onSetAction(() => state.machine.history, () => '물리 추첨기 번호'));
 
     $('#saved').addEventListener('click', e => {
