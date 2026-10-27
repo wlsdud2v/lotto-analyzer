@@ -42,7 +42,9 @@ for (let r = 1; r <= next; r++) {
 // 운세: 최근 12주 + 다음 회차
 const fortunes = {};
 for (let r = Math.max(2, next - 12); r <= next; r++) {
-  fortunes[r] = (data.fortunes && data.fortunes[r]) || T.fortunesFor(E, draws, data.picks, r);
+  // 대사 생성 규칙이 바뀌었으면(버전이 다르면) 다시 만듦. 번호는 절대 다시 만들지 않음
+  const same = data.fortune_version === T.FORTUNE_VERSION;
+  fortunes[r] = (same && data.fortunes && data.fortunes[r]) || T.fortunesFor(E, draws, data.picks, r);
 }
 
 const out = {
@@ -52,6 +54,7 @@ const out = {
   next_round: next,
   next_date: (() => { const [y, m, d] = draws[latest - 1].date.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + 7)).toISOString().slice(0, 10); })(),
   updated_at: added ? new Date().toISOString() : (data.updated_at || new Date().toISOString()),
+  fortune_version: T.FORTUNE_VERSION,
   fortunes,
   picks: data.picks,
 };
