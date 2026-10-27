@@ -1,0 +1,64 @@
+name: 데이터 갱신 및 배포
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 15 * * 6'   # 토요일 24:00 KST (추첨 후)
+    - cron: '0 1 * * 0'    # 일요일 10:00 KST
+    - cron: '0 1 * * 1'    # 월요일 10:00 KST (원본 반영이 늦을 때 보정)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 최신 당첨 번호 추가
+        if: github.event_name != 'push'
+        run: node tools/update_data.js
+
+      - name: 변경된 데이터 커밋
+        if: github.event_name != 'push'
+        run: |
+          if git diff --quiet -- data; then echo "새 회차 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "data: $(node -p "require('./data/lotto_draws.json').meta.latest_draw")회 당첨 번호 추가"
+          git push
+
+      - name: 배포할 파일 모으기
+        run: |
+          mkdir _site
+          cp -r index.html og.png css js data _site/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

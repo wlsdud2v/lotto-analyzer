@@ -1,0 +1,552 @@
+/**
+ * 화면 로직: 상태 관리, 렌더링, 이벤트.
+ */
+(() => {
+  const E = LottoEngine;
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => [...document.querySelectorAll(sel)];
+
+  const state = {
+    allDraws: [],
+    source: '',
+    range: 0,            // 0 = 전체
+    recentN: 20,
+    stats: null,
+    pastKeys: new Set(),
+    pref: new Map(),     // n -> 'fix' | 'exc'
+    strategy: 'balanced',
+    prob: null,          // 번호별 추천 확률 (index 1..45)
+    sumTouched: false,
+    results: [],
+    checkSel: [],
+    sort: { key: 'n', asc: true },
+  };
+
+  const MAX_FIX = 5;
+  const SAVE_KEY = 'lotto.saved.v1';
+
+
+  // ───────────────────────── 유틸 ─────────────────────────
+
+  const dec = n => (n <= 10 ? 1 : n <= 20 ? 2 : n <= 30 ? 3 : n <= 40 ? 4 : 5);
+  const ball = (n, cls = '') => `<span class="ball d${dec(n)} ${cls}">${n}</span>`;
+  const pct = (v, d = 1) => (v * 100).toFixed(d) + '%';
+  const fmt = n => n.toLocaleString('ko-KR');
+
+  function addDays(dateStr, days) {
+    const [y, m, dd] = dateStr.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1, dd + days));
+    return d.toISOString().slice(0, 10);
+  }
+
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  }
+
+  function loadSaved() {
+    try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || []; } catch (e) { return []; }
+  }
+
+  function storeSaved(list) {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(list)); } catch (e) { /* 저장소 사용 불가 */ }
+  }
+
+  const scopeDraws = () => (state.range ? state.allDraws.slice(-state.range) : state.allDraws);
+  const fixedNums = () => [...state.pref].filter(([, v]) => v === 'fix').map(([n]) => n).sort((a, b) => a - b);
+  const excludedNums = () => [...state.pref].filter(([, v]) => v === 'exc').map(([n]) => n).sort((a, b) => a - b);
+
+
+  function readFilters() {
+    let min = +$('#fSumMin').value || 21, max = +$('#fSumMax').value || 255;
+    if (min > max) [min, max] = [max, min];
+    return {
+      sum: $('#fSum').checked, sumMin: min, sumMax: max,
+      oddEven: $('#fOddEven').checked,
+      highLow: $('#fHighLow').checked,
+      noRun: $('#fRun').checked,
+      spread: $('#fSpread').checked,
+    };
+  }
+
+
+  function currentOpts() {
+    return { strategy: state.strategy, fixed: fixedNums(), excluded: excludedNums(), companion: $('#companion').checked };
+  }
+
+
+  // ───────────────────────── 데이터 반영 ─────────────────────────
+
+  function setData({ draws, source }) {
+    state.allDraws = draws;
+    state.source = source;
+    state.pastKeys = new Set(draws.map(d => d.nums.join(',')));
+    state.results = [];
+    renderHeader();
+    refreshStats();
+    renderResults();
+    renderSaved();
+    renderCheck();
+  }
+
+
+  function renderHeader() {
+    const all = state.allDraws;
+    const first = all[0], last = all[all.length - 1];
+    $('#dataInfo').textContent = `${first.no}회 ~ ${last.no}회 (${fmt(all.length)}회차) · ${state.source}`;
+    const nextDate = addDays(last.date, 7);
+    $('#latest').innerHTML = `
+      <div class="lbl"><b>${last.no}회 당첨번호</b>${last.date}</div>
+      <div class="balls">${last.nums.map(n => ball(n, 'sm')).join('')}<span class="plus">+</span>${ball(last.bonus, 'sm')}</div>
+      <div class="lbl"><b>다음 ${last.no + 1}회</b>${nextDate} 추첨</div>`;
+  }
+
+
+  function refreshStats() {
+    const draws = scopeDraws();
+    state.stats = E.computeStats(draws, state.recentN);
+    const s = state.stats;
+    $('#rangeHint').textContent = `분석 대상 ${draws[0].no}회 ~ ${draws[draws.length - 1].no}회 · 회차당 이론 기대 출현 ${s.expected.toFixed(1)}번`;
+
+    // 합계 필터 기본값 = 분석 범위 내 당첨번호 합계의 하위 10% ~ 상위 10%
+    if (!state.sumTouched) {
+      $('#fSumMin').value = s.sumP10;
+      $('#fSumMax').value = s.sumP90;
+    }
+    renderStatsTab();
+    scheduleProb();
+  }
+
+
+  // ───────────────────────── 추천 확률 ─────────────────────────
+
+  function computeProb() {
+    const opts = currentOpts();
+    const w = E.buildWeights(state.stats, opts);
+    state.prob = E.inclusionProbability(w, opts.fixed, readFilters(), state.pastKeys);
+    renderTopProb();
+    renderStatsTable();
+  }
+
+  const scheduleProb = debounce(computeProb, 120);
+
+
+  function renderTopProb() {
+    const p = state.prob;
+    const fixed = new Set(fixedNums());
+    const list = [];
+    for (let n = 1; n <= 45; n++) if (!fixed.has(n)) list.push({ n, p: p[n] });
+    list.sort((a, b) => b.p - a.p);
+    const max = list[0] ? list[0].p : 1;
+    const free = 45 - fixed.size - excludedNums().length;
+    const base = (6 - fixed.size) / free;
+    const fixedNote = `<p class="hint" style="grid-column:1/-1">${fixed.size ? `포함 번호 ${[...fixed].join(', ')}는 100%로 고정되어 목록에서 뺐습니다. ` : ''}같은 조건에서 완전 무작위로 고를 때의 기준 확률은 번호당 ${pct(base, 1)}입니다.</p>`;
+    $('#topProb').innerHTML = fixedNote + list.slice(0, 10).map(x => `
+      <div class="tp">${ball(x.n, 'sm')}<div class="bar"><i style="width:${(x.p / max) * 100}%"></i></div><span class="v">${pct(x.p)}</span></div>`).join('');
+  }
+
+
+  // ───────────────────────── 선호 번호 ─────────────────────────
+
+  function buildPicker(el, onClick) {
+    el.innerHTML = Array.from({ length: 45 }, (_, i) => `<button class="pick" data-n="${i + 1}">${i + 1}</button>`).join('');
+    el.addEventListener('click', e => {
+      const b = e.target.closest('.pick');
+      if (b) onClick(+b.dataset.n);
+    });
+  }
+
+
+  function onPrefClick(n) {
+    const cur = state.pref.get(n);
+    if (!cur) {
+      if (fixedNums().length >= MAX_FIX) { toast(`포함 번호는 최대 ${MAX_FIX}개까지 고를 수 있어요. 한 번 더 누르면 제외로 바뀝니다.`); state.pref.set(n, 'exc'); }
+      else state.pref.set(n, 'fix');
+    } else if (cur === 'fix') state.pref.set(n, 'exc');
+    else state.pref.delete(n);
+
+    if (45 - excludedNums().length - fixedNums().length < 6 - fixedNums().length) {
+      state.pref.delete(n);
+      toast('제외 번호가 너무 많아 6개를 채울 수 없습니다.');
+    }
+    renderPref();
+    scheduleProb();
+  }
+
+
+  function renderPref() {
+    $$('#prefPicker .pick').forEach(b => {
+      const v = state.pref.get(+b.dataset.n);
+      b.className = 'pick' + (v ? ' ' + v : '');
+    });
+    const f = fixedNums(), x = excludedNums();
+    $('#prefSummary').innerHTML = (!f.length && !x.length)
+      ? '선택 없음 — 선호 번호 없이 추천합니다.'
+      : `${f.length ? `<b class="tag fix">포함</b> ${f.join(', ')}` : ''} ${x.length ? `&nbsp;<b class="tag exc">제외</b> ${x.join(', ')}` : ''}
+         &nbsp;<button class="btn ghost sm" id="prefClear">초기화</button>`;
+    const clr = $('#prefClear');
+    if (clr) clr.onclick = () => { state.pref.clear(); renderPref(); scheduleProb(); };
+  }
+
+
+  function renderStrategies() {
+    $('#strategies').innerHTML = Object.entries(E.STRATEGIES).map(([k, v]) =>
+      `<button class="strat ${k === state.strategy ? 'active' : ''}" data-k="${k}"><b>${v.label}</b><span>${v.desc}</span></button>`).join('');
+  }
+
+
+  // ───────────────────────── 추천 생성 ─────────────────────────
+
+  function generate() {
+    const opts = currentOpts();
+    const filters = readFilters();
+    const count = Math.max(1, Math.min(10, +$('#setCount').value || 5));
+    $('#setCount').value = count;
+
+    const weekly = $('#weekly').checked;
+    const nextNo = state.allDraws[state.allDraws.length - 1].no + 1;
+    let seed;
+    if (weekly) {
+      seed = E.hashString([nextNo, state.range, state.recentN, opts.strategy, opts.fixed, opts.excluded, opts.companion, JSON.stringify(filters), count].join('|'));
+    } else {
+      const a = new Uint32Array(1);
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      seed = a[0];
+    }
+    const rng = E.mulberry32(seed);
+    const w = E.buildWeights(state.stats, opts);
+    const sets = E.generate(count, w, opts.fixed, filters, state.pastKeys, rng);
+
+    state.results = sets.map(r => ({ nums: r.set, relaxed: r.relaxed, fixed: opts.fixed, strategy: opts.strategy }));
+    const label = E.STRATEGIES[opts.strategy].label;
+    $('#genInfo').textContent = `${label}${opts.fixed.length ? ` · 포함 ${opts.fixed.join(',')}` : ''}${weekly ? ` · ${nextNo}회 고정` : ''}`;
+    renderResults();
+  }
+
+
+  function setMeta(nums) {
+    const d = E.describe(nums);
+    const bt = E.backtest(nums, state.allDraws);
+    const r = bt.ranks;
+    const parts = [];
+    for (let k = 1; k <= 5; k++) if (r[k]) parts.push(`${k}등 ${r[k]}회`);
+    const hist = parts.length ? `<span class="hit">과거 대입: ${parts.join(' · ')}</span>` : '과거 대입: 3개 이상 일치 없음';
+    return `<span>합계 <b>${d.sum}</b></span><span>홀:짝 <b>${d.odd}:${d.even}</b></span><span>저:고 <b>${d.low}:${d.high}</b></span><span>${hist}</span>`;
+  }
+
+
+  function setRow(item, i, actions) {
+    const fixed = new Set(item.fixed || []);
+    return `
+      <div class="set">
+        <span class="idx">${String.fromCharCode(65 + i)}</span>
+        <div class="balls">${item.nums.map(n => ball(n, fixed.has(n) ? 'fixed' : '')).join('')}</div>
+        <div class="acts">${actions}</div>
+        <div class="meta">${setMeta(item.nums)}${item.relaxed ? '<span class="warn">필터 조건을 모두 만족하는 조합을 찾지 못해 일부 필터를 완화했습니다</span>' : ''}${item.at ? `<span>${item.at} 저장</span>` : ''}</div>
+      </div>`;
+  }
+
+
+  function renderResults() {
+    const el = $('#results');
+    if (!state.results.length) { el.innerHTML = '<p class="empty">설정을 고른 뒤 <b>추천 번호 생성</b>을 누르세요.</p>'; return; }
+    const share = window.AndroidBridge ? i => `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : () => '';
+    el.innerHTML = state.results.map((r, i) => setRow(r, i,
+      `<button class="btn ghost sm" data-act="copy" data-i="${i}">복사</button>${share(i)}<button class="btn ghost sm" data-act="save" data-i="${i}">저장</button>`)).join('');
+  }
+
+
+  function renderSaved() {
+    const list = loadSaved();
+    $('#clearSaved').style.display = list.length ? '' : 'none';
+    $('#saved').innerHTML = list.length
+      ? list.map((r, i) => setRow(r, i, `<button class="btn ghost sm" data-act="copy-saved" data-i="${i}">복사</button><button class="btn ghost sm" data-act="del" data-i="${i}">삭제</button>`)).join('')
+      : '<p class="empty">마음에 드는 추천 조합을 저장해 두면 이 브라우저에 남아 있습니다.</p>';
+  }
+
+
+  function copyNums(nums) {
+    const text = nums.join(', ');
+    if (window.AndroidBridge) {            // 안드로이드 앱(WebView)에서는 네이티브 클립보드 사용
+      window.AndroidBridge.copy(text);
+      toast(`복사했습니다: ${text}`);
+      return;
+    }
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(() => toast(`복사했습니다: ${text}`))
+      .catch(() => toast(text));
+  }
+
+
+  // ───────────────────────── 통계 탭 ─────────────────────────
+
+  function renderStatsTab() {
+    const s = state.stats;
+    const arr = s.nums.slice(1);
+    const draws = scopeDraws();
+    const top = [...arr].sort((a, b) => b.count - a.count).slice(0, 3);
+    const cold = [...arr].sort((a, b) => b.gap - a.gap).slice(0, 3);
+    const hotRecent = [...arr].sort((a, b) => b.recent - a.recent).slice(0, 3);
+
+    $('#kpis').innerHTML = `
+      <div class="kpi"><div class="k">분석 회차</div><div class="v">${fmt(s.total)}회</div><div class="s">${draws[0].date} ~ ${draws[draws.length - 1].date}</div></div>
+      <div class="kpi"><div class="k">최다 출현</div><div class="v">${top.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${top.map(x => `${x.n}번 ${x.count}회`).join(' · ')}</div></div>
+      <div class="kpi"><div class="k">최근 ${s.recentN}회 강세</div><div class="v">${hotRecent.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${hotRecent.map(x => `${x.n}번 ${x.recent}회`).join(' · ')}</div></div>
+      <div class="kpi"><div class="k">최장 미출현</div><div class="v">${cold.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${cold.map(x => `${x.n}번 ${x.gap}회째`).join(' · ')}</div></div>`;
+
+    // 히트맵
+    const ratios = arr.map(x => x.ratio);
+    const lo = Math.min(...ratios), hi = Math.max(...ratios);
+    $('#heat').innerHTML = arr.map(x => {
+      const t = hi === lo ? 0.5 : (x.ratio - lo) / (hi - lo);
+      const mix = Math.round(8 + t * 72);
+      const ink = mix > 50 ? '#fff' : 'var(--text)';
+      return `<div class="hcell" style="background:color-mix(in srgb, var(--accent) ${mix}%, var(--surface));color:${ink}" title="${x.n}번: ${x.count}회 (이론 대비 ${pct(x.ratio, 0)})">
+        <div class="n">${x.n}</div><div class="r">${pct(x.rate)}</div></div>`;
+    }).join('');
+
+    renderChart();
+    renderStatsTable();
+  }
+
+
+  function renderChart() {
+    const s = state.stats;
+    const arr = s.nums.slice(1);
+    const W = 900, H = 240, L = 34, R = 8, T = 10, B = 26;
+    const max = Math.max(...arr.map(x => x.count), s.expected) * 1.08;
+    const bw = (W - L - R) / 45;
+    const y = v => T + (H - T - B) * (1 - v / max);
+    const colors = ['', 'var(--b1)', 'var(--b2)', 'var(--b3)', 'var(--b4)', 'var(--b5)'];
+
+    const ticks = 4;
+    let grid = '';
+    for (let i = 0; i <= ticks; i++) {
+      const v = Math.round((max / ticks) * i);
+      grid += `<text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+    }
+    const bars = arr.map((x, i) => {
+      const bx = L + i * bw + bw * 0.15;
+      return `<rect x="${bx}" y="${y(x.count)}" width="${bw * 0.7}" height="${y(0) - y(x.count)}" rx="2" fill="${colors[dec(x.n)]}"><title>${x.n}번: ${x.count}회</title></rect>
+              <text class="ax" x="${bx + bw * 0.35}" y="${H - 10}" text-anchor="middle">${x.n}</text>`;
+    }).join('');
+    const ey = y(s.expected);
+    $('#chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="번호별 출현 횟수 막대 그래프">
+      ${grid}${bars}
+      <line class="exp" x1="${L}" x2="${W - R}" y1="${ey}" y2="${ey}"/>
+      <text class="ax" x="${W - R}" y="${ey - 4}" text-anchor="end">기대 ${s.expected.toFixed(1)}</text></svg>`;
+  }
+
+
+  const COLS = [
+    { key: 'n', label: '번호' },
+    { key: 'count', label: '출현 횟수' },
+    { key: 'rate', label: '출현률' },
+    { key: 'ratio', label: '이론 대비' },
+    { key: 'recent', label: '최근 N회' },
+    { key: 'gap', label: '연속 미출현' },
+    { key: 'maxGap', label: '최장 미출현' },
+    { key: 'bonus', label: '보너스' },
+    { key: 'prob', label: '추천 확률' },
+  ];
+
+
+  function renderStatsTable() {
+    const s = state.stats;
+    if (!s) return;
+    const p = state.prob || [];
+    const rows = s.nums.slice(1).map(x => ({ ...x, prob: p[x.n] ?? 0 }));
+    const { key, asc } = state.sort;
+    rows.sort((a, b) => (a[key] - b[key]) * (asc ? 1 : -1) || a.n - b.n);
+
+    const head = COLS.map(c => `<th data-k="${c.key}" class="${c.key === key ? 'sorted' + (asc ? ' asc' : '') : ''}">${c.key === 'recent' ? `최근 ${s.recentN}회` : c.label}</th>`).join('');
+    const body = rows.map(x => {
+      const diff = x.ratio - 1;
+      const cls = diff > 0.05 ? 'up' : diff < -0.05 ? 'down' : '';
+      return `<tr>
+        <td>${ball(x.n, 'sm')}</td>
+        <td>${x.count}</td>
+        <td>${pct(x.rate, 2)}</td>
+        <td class="${cls}">${pct(x.ratio, 0)}</td>
+        <td>${x.recent}</td>
+        <td>${x.gap ? x.gap + '회' : '<b>직전 출현</b>'}</td>
+        <td>${x.maxGap}회</td>
+        <td>${x.bonus}</td>
+        <td><b>${state.prob ? pct(x.prob, 1) : '…'}</b></td>
+      </tr>`;
+    }).join('');
+    $('#statsTable').innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+  }
+
+
+  // ───────────────────────── 내 번호 확인 ─────────────────────────
+
+  function onCheckClick(n) {
+    const i = state.checkSel.indexOf(n);
+    if (i >= 0) state.checkSel.splice(i, 1);
+    else if (state.checkSel.length < 6) state.checkSel.push(n);
+    else { toast('6개까지 고를 수 있습니다.'); return; }
+    renderCheck();
+  }
+
+
+  function renderCheck() {
+    const sel = [...state.checkSel].sort((a, b) => a - b);
+    $$('#checkPicker .pick').forEach(b => b.classList.toggle('on', sel.includes(+b.dataset.n)));
+    $('#checkSel').innerHTML = sel.length ? sel.map(n => ball(n)).join('') : '<span class="hint" style="margin:0">선택한 번호가 여기에 표시됩니다</span>';
+
+    const out = $('#checkResult');
+    if (sel.length < 6 || !state.allDraws.length) { out.innerHTML = ''; return; }
+
+    const bt = E.backtest(sel, state.allDraws);
+    const d = E.describe(sel);
+    const labels = ['', '1등', '2등', '3등', '4등', '5등'];
+    const sub = ['', '6개 일치', '5개+보너스', '5개 일치', '4개 일치', '3개 일치'];
+    const total = bt.wins.length;
+    out.innerHTML = `
+      <p class="hint" style="margin-top:16px">합계 ${d.sum} · 홀:짝 ${d.odd}:${d.even} · 저:고 ${d.low}:${d.high} — 전체 ${fmt(state.allDraws.length)}회 중 ${total}회 당첨권(5등 이상)</p>
+      <div class="ranks">${[1, 2, 3, 4, 5].map(k => `<div class="rank ${bt.ranks[k] ? 'has' : ''}"><div class="k">${labels[k]} · ${sub[k]}</div><div class="v">${bt.ranks[k]}</div></div>`).join('')}</div>
+      ${total ? `<div class="table-wrap"><table class="wins"><thead><tr><th>회차</th><th>날짜</th><th>등수</th><th>당첨번호</th></tr></thead><tbody>
+        ${bt.wins.slice(0, 60).map(w => `<tr><td>${w.no}회</td><td>${w.date}</td><td><b>${labels[w.rank]}</b></td>
+          <td><div class="balls">${w.nums.map(n => ball(n, 'sm ' + (sel.includes(n) ? 'match' : 'dim'))).join('')}<span class="plus">+</span>${ball(w.bonus, 'sm ' + (sel.includes(w.bonus) ? 'match' : 'dim'))}</div></td></tr>`).join('')}
+      </tbody></table></div>${total > 60 ? `<p class="hint">상위 60건만 표시했습니다.</p>` : ''}` : ''}`;
+  }
+
+
+  // ───────────────────────── 이벤트 ─────────────────────────
+
+  function bind() {
+    $$('.tab').forEach(t => t.addEventListener('click', () => {
+      $$('.tab').forEach(x => x.classList.toggle('active', x === t));
+      $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t.dataset.tab));
+      try { localStorage.setItem('lotto.tab', t.dataset.tab); } catch (e) { /* 무시 */ }
+    }));
+    try {
+      const saved = localStorage.getItem('lotto.tab');
+      if (saved) { const t = $(`.tab[data-tab="${saved}"]`); t && t.click(); }
+    } catch (e) { /* 무시 */ }
+
+    $('#rangeSel').addEventListener('change', e => { state.range = +e.target.value; refreshStats(); });
+    $('#recentSel').addEventListener('change', e => { state.recentN = +e.target.value; refreshStats(); });
+
+    buildPicker($('#prefPicker'), onPrefClick);
+    buildPicker($('#checkPicker'), onCheckClick);
+
+    $('#strategies').addEventListener('click', e => {
+      const b = e.target.closest('.strat');
+      if (!b) return;
+      state.strategy = b.dataset.k;
+      renderStrategies();
+      scheduleProb();
+    });
+
+    ['#fSum', '#fOddEven', '#fHighLow', '#fRun', '#fSpread', '#companion'].forEach(id => $(id).addEventListener('change', scheduleProb));
+    ['#fSumMin', '#fSumMax'].forEach(id => $(id).addEventListener('input', () => { state.sumTouched = true; scheduleProb(); }));
+
+    $('#genBtn').addEventListener('click', generate);
+
+    $('#results').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]');
+      if (!b) return;
+      const r = state.results[+b.dataset.i];
+      if (b.dataset.act === 'copy') copyNums(r.nums);
+      if (b.dataset.act === 'share') {
+        const nextNo = state.allDraws[state.allDraws.length - 1].no + 1;
+        window.AndroidBridge.share(`[로또 ${nextNo}회 추천 번호]\n${r.nums.join(', ')}`);
+      }
+      if (b.dataset.act === 'save') {
+        const list = loadSaved();
+        if (list.some(x => x.nums.join() === r.nums.join())) { toast('이미 저장한 조합입니다.'); return; }
+        list.unshift({ nums: r.nums, fixed: r.fixed, at: new Date().toLocaleDateString('ko-KR') });
+        storeSaved(list.slice(0, 50));
+        renderSaved();
+        toast('저장했습니다.');
+      }
+    });
+
+    $('#saved').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]');
+      if (!b) return;
+      const list = loadSaved();
+      const i = +b.dataset.i;
+      if (b.dataset.act === 'copy-saved') copyNums(list[i].nums);
+      if (b.dataset.act === 'del') { list.splice(i, 1); storeSaved(list); renderSaved(); }
+    });
+    $('#clearSaved').addEventListener('click', () => { storeSaved([]); renderSaved(); });
+
+    $('#statsTable').addEventListener('click', e => {
+      const th = e.target.closest('th[data-k]');
+      if (!th) return;
+      const k = th.dataset.k;
+      state.sort = { key: k, asc: state.sort.key === k ? !state.sort.asc : k === 'n' };
+      renderStatsTable();
+    });
+
+    $('#checkReset').addEventListener('click', () => { state.checkSel = []; renderCheck(); });
+    $('#updateBtn').addEventListener('click', () => runUpdate(true));
+
+    $('#fileInput').addEventListener('change', async e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        setData(await LottoData.loadFile(f));
+        toast(`${f.name}: ${state.allDraws.length}회차를 불러왔습니다.`);
+      } catch (err) {
+        toast('불러오기 실패: ' + err.message);
+      }
+      e.target.value = '';
+    });
+  }
+
+
+  /** 최신 회차 확인. force=false 는 앱 시작 시 자동 확인(추첨 후에만, 30분 간격) */
+  async function runUpdate(force) {
+    if (!state.allDraws.length || typeof LottoUpdater === 'undefined') return;
+    const btn = $('#updateBtn');
+    btn.disabled = true;
+    btn.textContent = '확인 중…';
+    try {
+      const res = await LottoUpdater.check(state.allDraws, { force });
+      if (res.status === 'updated') {
+        const before = state.allDraws[state.allDraws.length - 1].no;
+        setData(LottoData.merge(state.allDraws, res.added, '자동 업데이트'));
+        const after = state.allDraws[state.allDraws.length - 1];
+        if (after.no > before) {
+          toast(`새 당첨 번호 추가: ${after.no > before + 1 ? `${before + 1}~` : ''}${after.no}회 (${after.nums.join(', ')} + ${after.bonus})`);
+        }
+      } else if (force && res.status === 'up-to-date') {
+        toast(`이미 최신입니다 (${res.latestNo}회)`);
+      }
+    } catch (err) {
+      if (force) toast('업데이트 실패: 인터넷 연결을 확인하세요');
+      console.warn('update failed', err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '최신 회차 확인';
+    }
+  }
+
+
+  async function init() {
+    bind();
+    renderStrategies();
+    renderPref();
+    try {
+      setData(await LottoData.loadDefault());
+    } catch (err) {
+      $('#dataInfo').textContent = err.message;
+      return;
+    }
+    runUpdate(false);
+  }
+
+  init();
+})();
