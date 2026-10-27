@@ -59,8 +59,8 @@
 
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="recommend" role="tab">번호 추천</button>
-      <button class="tab" data-tab="tarot" role="tab">타로 추천</button>
-      <button class="tab" data-tab="machine" role="tab">추첨기</button>
+      <button class="tab" data-tab="tarot" role="tab">타로 추천<span class="ribbon hot">HOT</span></button>
+      <button class="tab" data-tab="machine" role="tab">추첨기<span class="ribbon new">NEW</span></button>
       <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
       <button class="tab" data-tab="check" role="tab">내 번호 확인</button>
     </nav>
@@ -80,19 +80,19 @@
 
           <h2>조합 필터</h2>
           <div class="filters">
-            <label class="check"><input type="checkbox" id="fSum" checked> 번호 합계
+            <label class="check"><input type="checkbox" id="fSum"> 번호 합계
               <input type="number" id="fSumMin" class="num" min="21" max="255"> ~ <input type="number" id="fSumMax" class="num" min="21" max="255">
             </label>
-            <label class="check"><input type="checkbox" id="fOddEven" checked> 홀/짝이 한쪽으로만 몰린 조합 제외</label>
-            <label class="check"><input type="checkbox" id="fHighLow" checked> 저(1~22)/고(23~45) 한쪽 몰림 제외</label>
-            <label class="check"><input type="checkbox" id="fRun" checked> 3개 이상 연속 번호 제외</label>
+            <label class="check"><input type="checkbox" id="fOddEven"> 홀/짝이 한쪽으로만 몰린 조합 제외</label>
+            <label class="check"><input type="checkbox" id="fHighLow"> 저(1~22)/고(23~45) 한쪽 몰림 제외</label>
+            <label class="check"><input type="checkbox" id="fRun"> 3개 이상 연속 번호 제외</label>
             <label class="check"><input type="checkbox" id="fSpread"> 번호대(1·10·20·30·40번대) 3구간 이상</label>
             <p class="hint">역대 1등 당첨 조합과 같은 조합은 항상 제외됩니다.</p>
           </div>
 
           <div class="gen-row">
             <label>세트 수 <input type="number" id="setCount" class="num" value="5" min="1" max="10"></label>
-            <label class="check"><input type="checkbox" id="weekly"> 이번 주 고정 추천</label>
+            <label class="check"><input type="checkbox" id="weekly" checked> 이번 주 고정 추천</label>
           </div>
           <button class="btn primary big" id="genBtn">추천 번호 생성</button>
         </div>
