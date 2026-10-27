@@ -248,7 +248,7 @@ input.num { width: 64px; text-align: center; }
 
 .tarot-controls { display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
 .tarot-controls label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg { display: inline-flex; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { font: inherit; font-size: 14px; border: 0; background: var(--surface); color: var(--muted); padding: 8px 14px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button.active { background: var(--t-back); color: #fff; font-weight: 700; }
@@ -370,4 +370,84 @@ input.num { width: 64px; text-align: center; }
 @media (max-width: 520px) {
   .tray { gap: 5px; padding: 8px; }
   .tray .slot-b { width: 32px; height: 32px; }
+}
+
+/* ───────── 스피또 ───────── */
+.sp-head-r { display: flex; align-items: center; gap: 10px; }
+.sp-status { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sp-game { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--surface-2); }
+.sp-game h3 { margin: 0 0 8px; font-size: 16px; display: flex; justify-content: space-between; align-items: baseline; }
+.sp-game h3 small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.sp-round { border-top: 1px solid var(--line); padding: 10px 0 4px; }
+.sp-round:first-of-type { border-top: 0; padding-top: 2px; }
+.sp-round .rh { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.sp-round .rh b { font-size: 15px; }
+.sp-round .rh .end { font-size: 12px; color: var(--muted); }
+.sp-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 6px 0 2px; }
+.sp-bar i { display: block; height: 100%; background: var(--accent); }
+.sp-rate { font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; }
+.sp-rate b { color: var(--text); }
+.sp-ranks { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.sp-ranks td { padding: 3px 0; }
+.sp-ranks td:nth-child(2) { color: var(--muted); }
+.sp-ranks td:nth-child(3), .sp-ranks td:nth-child(4) { text-align: right; }
+.sp-ranks .won { color: var(--ok); font-weight: 700; }
+.sp-ranks .left-all { color: var(--accent); font-weight: 700; }
+.sp-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+.sp-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.sp-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.sp-actions .btn { flex: 1; }
+.sp-session { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.sp-session .k { font-size: 12px; color: var(--muted); }
+.sp-session .v { font-weight: 900; font-size: 16px; font-variant-numeric: tabular-nums; }
+.sp-session .neg { color: var(--fix); }
+.sp-session .pos { color: var(--ok); }
+
+/* 복권 카드 (시뮬레이션용 단순 디자인) */
+.ticket-wrap { display: flex; justify-content: center; }
+.ticket { --tc: #6b4bd6; width: 100%; max-width: 420px; border-radius: 14px; padding: 12px; background: linear-gradient(140deg, var(--tc), color-mix(in srgb, var(--tc) 55%, #000)); color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.15); user-select: none; -webkit-user-select: none; }
+.ticket.SP1000 { --tc: #1f9d6a; }
+.ticket.SP2000 { --tc: #6b4bd6; }
+.ticket.SP500 { --tc: #e07a1f; }
+.ticket .th { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 10px; }
+.ticket .th b { font-size: 20px; font-weight: 900; letter-spacing: -.02em; }
+.ticket .th span { font-size: 11.5px; opacity: .85; }
+.ticket .play { position: relative; background: #fffdf7; color: #2a2620; border-radius: 10px; padding: 12px; min-height: 180px; }
+.ticket .rule { font-size: 12px; color: #6f6a62; text-align: center; margin-bottom: 8px; }
+.ticket .grid9 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ticket .cell { border: 1px dashed #d8d2c4; border-radius: 8px; text-align: center; padding: 10px 2px; font-weight: 900; font-size: 18px; }
+.ticket .cell.hit { background: #fff1c2; border: 2px solid #e8b100; }
+.ticket .lucky { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.ticket .lucky span { width: 42px; height: 42px; border-radius: 50%; background: var(--tc); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+.ticket .mine { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ticket .mine div { border: 1px dashed #d8d2c4; border-radius: 8px; text-align: center; padding: 6px 2px; }
+.ticket .mine b { display: block; font-size: 18px; }
+.ticket .mine small { font-size: 12px; color: #6f6a62; }
+.ticket .mine .hit { background: #fff1c2; border: 2px solid #e8b100; }
+.ticket canvas.scratch { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; touch-action: none; cursor: grab; transition: opacity .5s; }
+.ticket canvas.scratch.gone { opacity: 0; pointer-events: none; }
+.ticket .verdict { text-align: center; font-weight: 900; font-size: 17px; padding: 10px 0 2px; min-height: 34px; }
+.ticket .verdict.lose { opacity: .8; font-weight: 700; }
+
+.sp-bulk-ctrl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.sp-sum { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.sp-sum > div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.sp-sum .k { font-size: 12px; color: var(--muted); }
+.sp-sum .v { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.sp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.sp-table th, .sp-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.sp-table th:first-child, .sp-table td:first-child { text-align: left; }
+.sp-table th { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+#spStructure { margin-top: 18px; }
+#spStructure h3 { font-size: 14px; margin: 0 0 6px; }
+
+@media (max-width: 900px) {
+  .sp-status { grid-template-columns: minmax(0, 1fr); }
+  .sp-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .sp-session { grid-template-columns: repeat(2, 1fr); }
+  .card-head .seg button { padding: 7px 8px; font-size: 12.5px; }
+  .sp-bulk-ctrl .seg button { padding: 7px 8px; font-size: 12.5px; }
 }

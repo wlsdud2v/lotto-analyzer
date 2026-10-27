@@ -22,6 +22,7 @@
     sort: { key: 'n', asc: true },
     tarot: { spread: 3, deck: [], picks: [], reading: null, results: [], revealing: false },
     machine: { m: null, history: [], drawn: [] },
+    sp: { game: 'SP2000', ticket: null, session: { n: 0, cost: 0, prize: 0 }, bulkN: 100, statusLoaded: false },
   };
 
   const MAX_FIX = 5;
@@ -354,6 +355,277 @@
   }
 
 
+  // ───────────────────────── 스피또 ─────────────────────────
+
+  const SP = () => LottoSpeetto;
+  const spGame = () => SP().GAMES[state.sp.game];
+
+
+  function initSpeetto() {
+    if (typeof LottoSpeetto === 'undefined') return;
+    $('#spGameSel').addEventListener('click', e => {
+      const b = e.target.closest('button[data-g]');
+      if (!b) return;
+      finalizeTicket();
+      state.sp.game = b.dataset.g;
+      state.sp.ticket = null;
+      $$('#spGameSel button').forEach(x => x.classList.toggle('active', x === b));
+      renderTicket();
+      renderSpStructure();
+      $('#spBulkResult').innerHTML = '';
+    });
+    $('#spBuy').addEventListener('click', buyTicket);
+    $('#spReveal').addEventListener('click', () => revealTicket());
+    $('#spBulkN').addEventListener('click', e => {
+      const b = e.target.closest('button[data-n]');
+      if (!b) return;
+      state.sp.bulkN = +b.dataset.n;
+      $$('#spBulkN button').forEach(x => x.classList.toggle('active', x === b));
+    });
+    $('#spBulkGo').addEventListener('click', () => renderBulk(SP().bulk(state.sp.game, state.sp.bulkN)));
+    $('#spUntil').addEventListener('click', () => renderBulk(SP().untilFirst(state.sp.game)));
+    $('#spRefresh').addEventListener('click', () => loadSpStatus(true));
+    renderTicket();
+    renderSession();
+    renderSpStructure();
+  }
+
+
+  function onSpeettoShown() {
+    if (!state.sp.statusLoaded) loadSpStatus(false);
+    // 숨겨져 있던 동안 크기가 0이었던 긁기 판을 다시 맞춤
+    const t = state.sp.ticket;
+    if (t && !t.revealed) setupScratch();
+  }
+
+
+  // ── 발행 현황
+
+  async function loadSpStatus(manual) {
+    state.sp.statusLoaded = true;
+    $('#spStatusInfo').textContent = '불러오는 중…';
+    try {
+      const st = await SP().loadStatus();
+      renderSpStatus(st);
+      if (manual) toast('스피또 현황을 새로 불러왔습니다.');
+    } catch (err) {
+      state.sp.statusLoaded = false;
+      $('#spStatusInfo').textContent = '현황을 불러오지 못했습니다';
+      $('#spStatus').innerHTML = '<p class="sp-empty">인터넷 연결을 확인한 뒤 새로고침을 눌러 주세요.</p>';
+    }
+  }
+
+
+  function renderSpStatus(st) {
+    const games = SP().GAMES;
+    let dataDate = '';
+    $('#spStatus').innerHTML = Object.keys(games).map(g => {
+      const list = (st.games[g] || []).filter(x => x.status === '판매중').sort((a, b) => b.round - a.round);
+      const prizes = games[g].ranks;
+      const rounds = list.map(x => {
+        if (x.dataDate && x.dataDate > dataDate) dataDate = x.dataDate;
+        const rows = [x.rank1, x.rank2, x.rank3].map((q, i) => {
+          if (!q) return '';
+          const wonN = q.total - q.left;
+          return `<tr><td>${i + 1}등</td><td>${SP().won(prizes[i].prize)}원</td>
+            <td class="${q.left === q.total ? 'left-all' : ''}">잔여 ${fmt(q.left)}/${fmt(q.total)}</td>
+            <td class="${wonN ? 'won' : ''}">당첨 ${fmt(wonN)}</td></tr>`;
+        }).join('');
+        return `<div class="sp-round">
+          <div class="rh"><b>${x.round}회</b><span class="end">판매 ~${x.saleEnd || '-'}</span></div>
+          <div class="sp-bar"><i style="width:${Math.min(100, x.shipRate || 0)}%"></i></div>
+          <div class="sp-rate"><span>입고율 <b>${x.shipRate}%</b></span><span>1등 ${x.prize1 || ''}</span></div>
+          <table class="sp-ranks">${rows}</table>
+        </div>`;
+      }).join('');
+      return `<div class="sp-game"><h3>${games[g].name}<small>${list.length}개 회차 판매 중</small></h3>${rounds || '<p class="sp-empty">판매 중인 회차가 없습니다.</p>'}</div>`;
+    }).join('');
+    const fetched = st.fetched_at ? new Date(st.fetched_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    $('#spStatusInfo').textContent = `${st.live ? '동행복권 실시간' : '자동 수집본'} · 기준일 ${dataDate || '-'}${fetched ? ` · ${fetched} 수집` : ''}`;
+  }
+
+
+  // ── 긁는 복권
+
+  function buyTicket() {
+    finalizeTicket();
+    const t = SP().makeTicket(state.sp.game);
+    t.revealed = false;
+    t.counted = false;
+    state.sp.ticket = t;
+    state.sp.session.n++;
+    state.sp.session.cost += spGame().price;
+    renderTicket();
+    renderSession();
+  }
+
+
+  /** 긁지 않은 채 다음 장을 사거나 게임을 바꾸면 결과만 집계 */
+  function finalizeTicket() {
+    const t = state.sp.ticket;
+    if (t && !t.counted) {
+      t.counted = true;
+      if (t.win) state.sp.session.prize += t.win.prize;
+      renderSession();
+    }
+  }
+
+
+  function ticketBody(t) {
+    const W = SP().won;
+    if (t.style === 'match3') {
+      return `<div class="rule">같은 금액이 3개 나오면 그 금액 당첨</div>
+        <div class="grid9">${t.cells.map(c => `<div class="cell" data-hit="${c.hit ? 1 : 0}">${W(c.amount)}원</div>`).join('')}</div>`;
+    }
+    return `<div class="rule">행운숫자와 같은 숫자가 있으면 그 아래 금액 당첨</div>
+      <div class="lucky">${t.lucky.map(n => `<span>${n}</span>`).join('')}</div>
+      <div class="mine">${t.mine.map(m => `<div data-hit="${m.hit ? 1 : 0}"><b>${m.num}</b><small>${W(m.amount)}원</small></div>`).join('')}</div>`;
+  }
+
+
+  function renderTicket() {
+    const g = spGame(), t = state.sp.ticket;
+    const body = t ? ticketBody(t) : `<div class="rule" style="padding-top:60px">아래 <b>1장 사서 긁기</b>를 누르세요</div>`;
+    $('#ticketWrap').innerHTML = `
+      <div class="ticket ${state.sp.game}">
+        <div class="th"><b>${g.name}</b><span>시뮬레이션 · 1장 ${g.price.toLocaleString('ko-KR')}원</span></div>
+        <div class="play">${body}${t ? '<canvas class="scratch" aria-label="긁는 부분"></canvas>' : ''}</div>
+        <div class="verdict" id="spVerdict">${t ? '손가락이나 마우스로 긁어 보세요' : ''}</div>
+      </div>`;
+    $('#spReveal').disabled = !t || t.revealed;
+    if (t) setupScratch();
+  }
+
+
+  function setupScratch() {
+    const cv = document.querySelector('#ticketWrap canvas.scratch');
+    if (!cv) return;
+    const play = cv.parentElement;
+    const w = play.clientWidth, h = play.clientHeight;
+    if (!w || !h) return;                       // 탭이 숨겨진 상태 — 보일 때 다시 호출됨
+    if (cv.dataset.ready === `${w}x${h}`) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    cv.dataset.ready = `${w}x${h}`;
+    const g = cv.getContext('2d');
+    const grad = g.createLinearGradient(0, 0, cv.width, cv.height);
+    grad.addColorStop(0, '#b9bdc4'); grad.addColorStop(.5, '#e6e8ec'); grad.addColorStop(1, '#a9aeb6');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = 'rgba(80,85,95,.35)';
+    g.font = `700 ${Math.round(13 * dpr)}px "Noto Sans KR", sans-serif`;
+    g.textAlign = 'center';
+    for (let y = 26 * dpr; y < cv.height; y += 34 * dpr) {
+      for (let x = (y / dpr / 34) % 2 ? 40 * dpr : 90 * dpr; x < cv.width; x += 120 * dpr) g.fillText('긁어 보세요', x, y);
+    }
+
+    let down = false, moves = 0, last = null;
+    const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr }; };
+    const scratch = p => {
+      g.globalCompositeOperation = 'destination-out';
+      g.lineWidth = 34 * dpr;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo((last || p).x, (last || p).y);
+      g.lineTo(p.x, p.y);
+      g.stroke();
+      last = p;
+      if (++moves % 10 === 0 && clearedRatio(g, cv) > 0.55) revealTicket();
+    };
+    cv.addEventListener('pointerdown', e => { down = true; last = null; cv.setPointerCapture(e.pointerId); scratch(pos(e)); });
+    cv.addEventListener('pointermove', e => { if (down) scratch(pos(e)); });
+    const up = () => { down = false; last = null; if (clearedRatio(g, cv) > 0.55) revealTicket(); };
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', up);
+  }
+
+
+  function clearedRatio(g, cv) {
+    const step = 12;
+    const data = g.getImageData(0, 0, cv.width, cv.height).data;
+    let clear = 0, total = 0;
+    for (let y = 0; y < cv.height; y += step) {
+      for (let x = 0; x < cv.width; x += step) {
+        total++;
+        if (data[(y * cv.width + x) * 4 + 3] < 40) clear++;
+      }
+    }
+    return total ? clear / total : 0;
+  }
+
+
+  function revealTicket() {
+    const t = state.sp.ticket;
+    if (!t || t.revealed) return;
+    t.revealed = true;
+    const cv = document.querySelector('#ticketWrap canvas.scratch');
+    if (cv) cv.classList.add('gone');
+    document.querySelectorAll('#ticketWrap [data-hit="1"]').forEach(el => el.classList.add('hit'));
+    const v = $('#spVerdict');
+    if (t.win) {
+      v.className = 'verdict';
+      v.textContent = `🎉 ${t.win.rank}등 ${SP().wonFull(t.win.prize)} 당첨!`;
+    } else {
+      v.className = 'verdict lose';
+      v.textContent = '아쉽게도 낙첨입니다';
+    }
+    $('#spReveal').disabled = true;
+    finalizeTicket();
+  }
+
+
+  function renderSession() {
+    const s = state.sp.session;
+    const net = s.prize - s.cost;
+    $('#spSession').innerHTML = `
+      <div><div class="k">산 복권</div><div class="v">${fmt(s.n)}장</div></div>
+      <div><div class="k">쓴 돈</div><div class="v">${fmt(s.cost)}원</div></div>
+      <div><div class="k">당첨금</div><div class="v">${fmt(s.prize)}원</div></div>
+      <div><div class="k">손익</div><div class="v ${net < 0 ? 'neg' : net > 0 ? 'pos' : ''}">${net > 0 ? '+' : ''}${fmt(net)}원</div></div>`;
+  }
+
+
+  // ── 대량 시뮬레이션
+
+  function renderBulk(r) {
+    const g = SP().GAMES[r.gameId];
+    const net = r.prize - r.cost;
+    const rate = r.cost ? r.prize / r.cost : 0;
+    const rows = g.ranks.map(k => {
+      const c = r.counts[k.rank] || 0;
+      const exp = r.untilFirst ? (k.rank === 1 ? 1 : (r.n - 1) * k.p / (1 - g.ranks[0].p)) : r.n * k.p;
+      return `<tr><td>${k.rank}등</td><td>${SP().won(k.prize)}원</td><td><b>${fmt(c)}</b></td><td>${exp < 10 ? exp.toFixed(2) : fmt(Math.round(exp))}</td></tr>`;
+    }).join('');
+    $('#spBulkResult').innerHTML = `
+      ${r.untilFirst ? `<p class="hint" style="margin:0 0 10px">1등이 <b>${fmt(r.n)}장째</b>에 나왔습니다 (2등 이하 매수는 통계적 근사).</p>` : ''}
+      ${!r.untilFirst && r.n * g.ranks[0].p < 1 ? `<p class="hint" style="margin:0 0 10px">이론 환급률 ${(g.payout * 100).toFixed(1)}%에는 1·2등 고액 당첨금이 포함되어 있어, 대부분의 시뮬레이션에서는 실제 환급률이 이론값보다 낮게 나옵니다.</p>` : ''}
+      <div class="sp-sum">
+        <div><div class="k">${g.name} ${fmt(r.n)}장 구매</div><div class="v">${fmt(r.cost)}원</div></div>
+        <div><div class="k">당첨금 합계</div><div class="v">${fmt(r.prize)}원</div></div>
+        <div><div class="k">손익</div><div class="v" style="color:${net < 0 ? 'var(--fix)' : 'var(--ok)'}">${net > 0 ? '+' : ''}${fmt(net)}원</div></div>
+        <div><div class="k">환급률 (이론 ${(g.payout * 100).toFixed(1)}%)</div><div class="v">${(rate * 100).toFixed(1)}%</div></div>
+      </div>
+      <div class="table-wrap"><table class="sp-table">
+        <thead><tr><th>등위</th><th>당첨금</th><th>당첨 매수</th><th>기대 매수</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
+
+  function renderSpStructure() {
+    const g = spGame();
+    const rows = g.ranks.map(k => `<tr><td>${k.rank}등</td><td>${SP().wonFull(k.prize)}</td><td>1/${fmt(Math.round(1 / k.p * 10) / 10)}</td><td>${fmt(k.count)}매</td></tr>`).join('');
+    $('#spStructure').innerHTML = `
+      <h3>${g.name} 당첨 구조 (${fmt(g.issue)}매 발행 기준)</h3>
+      <div class="table-wrap"><table class="sp-table">
+        <thead><tr><th>등위</th><th>당첨금</th><th>확률</th><th>매수</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <p class="note">아무 등위나 당첨될 확률 1/${(1 / g.winP).toFixed(1)} · 이론 환급률 ${(g.payout * 100).toFixed(2)}% — 평균적으로 산 금액의 ${Math.round((1 - g.payout) * 100)}%는 돌아오지 않습니다.</p>`;
+  }
+
+
   // ───────────────────────── 타로 추천 ─────────────────────────
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -662,10 +934,12 @@
 
   function bind() {
     initMachine();
+    initSpeetto();
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       $$('.tab').forEach(x => x.classList.toggle('active', x === t));
       $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t.dataset.tab));
       if (state.machine.m) state.machine.m.setVisible(t.dataset.tab === 'machine');
+      if (t.dataset.tab === 'speetto') onSpeettoShown();
       try { localStorage.setItem('lotto.tab', t.dataset.tab); } catch (e) { /* 무시 */ }
     }));
     try {

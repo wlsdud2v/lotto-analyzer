@@ -85,5 +85,5 @@ const LottoUpdater = (() => {
   }
 
 
-  return { check };
+  return { check, getText };
 })();

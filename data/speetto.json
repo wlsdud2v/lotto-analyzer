@@ -1,0 +1,444 @@
+{
+ "source": "https://www.dhlottery.co.kr/st/pblcnDsctn",
+ "fetched_at": "2026-10-27T10:53:57.911Z",
+ "games": {
+  "SP1000": [
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 111,
+    "status": "판매중",
+    "shipRate": 0,
+    "price": 1000,
+    "rank1": {
+     "left": 11,
+     "total": 11
+    },
+    "rank2": {
+     "left": 55,
+     "total": 55
+    },
+    "rank3": {
+     "left": 302500,
+     "total": 302500
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-12-31",
+    "payEnd": "2027-12-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 110,
+    "status": "판매중",
+    "shipRate": 70,
+    "price": 1000,
+    "rank1": {
+     "left": 5,
+     "total": 12
+    },
+    "rank2": {
+     "left": 33,
+     "total": 60
+    },
+    "rank3": {
+     "left": 228430,
+     "total": 330000
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-11-30",
+    "payEnd": "2027-11-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 109,
+    "status": "판매중",
+    "shipRate": 100,
+    "price": 1000,
+    "rank1": {
+     "left": 1,
+     "total": 12
+    },
+    "rank2": {
+     "left": 4,
+     "total": 60
+    },
+    "rank3": {
+     "left": 31964,
+     "total": 330000
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-10-31",
+    "payEnd": "2027-10-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 108,
+    "status": "판매종료",
+    "shipRate": 100,
+    "price": 1000,
+    "rank1": {
+     "left": 0,
+     "total": 11
+    },
+    "rank2": {
+     "left": 2,
+     "total": 55
+    },
+    "rank3": {
+     "left": 15380,
+     "total": 302500
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-09-30",
+    "payEnd": "2027-09-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 107,
+    "status": "판매종료",
+    "shipRate": 100,
+    "price": 1000,
+    "rank1": {
+     "left": 1,
+     "total": 12
+    },
+    "rank2": {
+     "left": 0,
+     "total": 60
+    },
+    "rank3": {
+     "left": 11429,
+     "total": 330000
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-08-31",
+    "payEnd": "2027-08-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 106,
+    "status": "판매종료",
+    "shipRate": 100,
+    "price": 1000,
+    "rank1": {
+     "left": 1,
+     "total": 12
+    },
+    "rank2": {
+     "left": 1,
+     "total": 60
+    },
+    "rank3": {
+     "left": 8696,
+     "total": 330000
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-07-31",
+    "payEnd": "2027-07-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 105,
+    "status": "판매종료",
+    "shipRate": 99,
+    "price": 1000,
+    "rank1": {
+     "left": 0,
+     "total": 11
+    },
+    "rank2": {
+     "left": 2,
+     "total": 55
+    },
+    "rank3": {
+     "left": 15994,
+     "total": 302500
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-06-30",
+    "payEnd": "2027-06-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 104,
+    "status": "판매종료",
+    "shipRate": 100,
+    "price": 1000,
+    "rank1": {
+     "left": 1,
+     "total": 11
+    },
+    "rank2": {
+     "left": 1,
+     "total": 55
+    },
+    "rank3": {
+     "left": 6232,
+     "total": 302500
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-05-31",
+    "payEnd": "2027-05-31",
+    "dataDate": "2026-10-23"
+   }
+  ],
+  "SP2000": [
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 70,
+    "status": "판매중",
+    "shipRate": 28,
+    "price": 2000,
+    "rank1": {
+     "left": 8,
+     "total": 8
+    },
+    "rank2": {
+     "left": 21,
+     "total": 24
+    },
+    "rank3": {
+     "left": 185,
+     "total": 200
+    },
+    "prize1": "10억원",
+    "saleEnd": "2026-12-31",
+    "payEnd": "2027-12-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 69,
+    "status": "판매중",
+    "shipRate": 99,
+    "price": 2000,
+    "rank1": {
+     "left": 1,
+     "total": 10
+    },
+    "rank2": {
+     "left": 4,
+     "total": 30
+    },
+    "rank3": {
+     "left": 30,
+     "total": 250
+    },
+    "prize1": "10억원",
+    "saleEnd": "2026-11-30",
+    "payEnd": "2027-11-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 68,
+    "status": "판매종료",
+    "shipRate": 100,
+    "price": 2000,
+    "rank1": {
+     "left": 1,
+     "total": 8
+    },
+    "rank2": {
+     "left": 0,
+     "total": 24
+    },
+    "rank3": {
+     "left": 14,
+     "total": 200
+    },
+    "prize1": "10억원",
+    "saleEnd": "2026-09-30",
+    "payEnd": "2027-09-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 67,
+    "status": "판매종료",
+    "shipRate": 81,
+    "price": 2000,
+    "rank1": {
+     "left": 0,
+     "total": 6
+    },
+    "rank2": {
+     "left": 5,
+     "total": 18
+    },
+    "rank3": {
+     "left": 35,
+     "total": 150
+    },
+    "prize1": "10억원",
+    "saleEnd": "2026-08-31",
+    "payEnd": "2027-08-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 66,
+    "status": "판매종료",
+    "shipRate": 74,
+    "price": 2000,
+    "rank1": {
+     "left": 0,
+     "total": 6
+    },
+    "rank2": {
+     "left": 3,
+     "total": 18
+    },
+    "rank3": {
+     "left": 48,
+     "total": 150
+    },
+    "prize1": "10억원",
+    "saleEnd": "2026-06-30",
+    "payEnd": "2027-06-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 65,
+    "status": "판매종료",
+    "shipRate": 100,
+    "price": 2000,
+    "rank1": {
+     "left": 0,
+     "total": 6
+    },
+    "rank2": {
+     "left": 0,
+     "total": 18
+    },
+    "rank3": {
+     "left": 3,
+     "total": 150
+    },
+    "prize1": "10억원",
+    "saleEnd": "2026-04-30",
+    "payEnd": "2027-04-30",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 64,
+    "status": "판매종료",
+    "shipRate": 80,
+    "price": 2000,
+    "rank1": {
+     "left": 4,
+     "total": 8
+    },
+    "rank2": {
+     "left": 6,
+     "total": 24
+    },
+    "rank3": {
+     "left": 57,
+     "total": 200
+    },
+    "prize1": "10억원",
+    "saleEnd": "2025-12-31",
+    "payEnd": "2026-12-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP2000",
+    "name": "스피또2000",
+    "round": 63,
+    "status": "판매종료",
+    "shipRate": 92,
+    "price": 2000,
+    "rank1": {
+     "left": 2,
+     "total": 8
+    },
+    "rank2": {
+     "left": 1,
+     "total": 24
+    },
+    "rank3": {
+     "left": 22,
+     "total": 200
+    },
+    "prize1": "10억원",
+    "saleEnd": "2025-11-30",
+    "payEnd": "2026-11-30",
+    "dataDate": "2026-10-23"
+   }
+  ],
+  "SP500": [
+   {
+    "game": "SP500",
+    "name": "스피또500",
+    "round": 48,
+    "status": "판매중",
+    "shipRate": 58,
+    "price": 500,
+    "rank1": {
+     "left": 3,
+     "total": 5
+    },
+    "rank2": {
+     "left": 48,
+     "total": 100
+    },
+    "rank3": {
+     "left": 156154,
+     "total": 300000
+    },
+    "prize1": "2억원",
+    "saleEnd": "2026-12-31",
+    "payEnd": "2027-12-31",
+    "dataDate": "2026-10-23"
+   },
+   {
+    "game": "SP500",
+    "name": "스피또500",
+    "round": 47,
+    "status": "판매종료",
+    "shipRate": 70,
+    "price": 500,
+    "rank1": {
+     "left": 2,
+     "total": 2
+    },
+    "rank2": {
+     "left": 19,
+     "total": 40
+    },
+    "rank3": {
+     "left": 46046,
+     "total": 120000
+    },
+    "prize1": "2억원",
+    "saleEnd": "2025-12-31",
+    "payEnd": "2026-12-31",
+    "dataDate": "2026-10-23"
+   }
+  ]
+ }
+}

@@ -61,6 +61,7 @@
       <button class="tab active" data-tab="recommend" role="tab">번호 추천</button>
       <button class="tab" data-tab="tarot" role="tab">타로 추천<span class="ribbon hot">HOT</span></button>
       <button class="tab" data-tab="machine" role="tab">추첨기<span class="ribbon new">NEW</span></button>
+      <button class="tab" data-tab="speetto" role="tab">스피또</button>
       <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
       <button class="tab" data-tab="check" role="tab">내 번호 확인</button>
     </nav>
@@ -201,6 +202,55 @@
       </div>
     </section>
 
+    <!-- ───────────── 스피또 ───────────── -->
+    <section class="panel" id="tab-speetto">
+      <div class="card">
+        <div class="card-head">
+          <h2>스피또 발행 현황</h2>
+          <div class="sp-head-r">
+            <span class="hint" id="spStatusInfo">불러오는 중…</span>
+            <button class="btn ghost sm" id="spRefresh">새로고침</button>
+          </div>
+        </div>
+        <div class="sp-status" id="spStatus"></div>
+        <p class="note">
+          <b>입고율</b>은 해당 회차 발행 매수 중 판매점에 공급(출고)된 비율, <b>잔여</b>는 아직 주인을 찾지 않은 당첨 복권 수,
+          <b>당첨</b>은 발행 매수 − 잔여 입니다. 출처: 동행복권 즉석식 복권 발행내역.
+        </p>
+      </div>
+
+      <div class="sp-layout">
+        <div class="card">
+          <div class="card-head">
+            <h2>스피또 시뮬레이터</h2>
+            <div class="seg" id="spGameSel">
+              <button data-g="SP1000">스피또1000</button><button data-g="SP2000" class="active">스피또2000</button><button data-g="SP500">스피또500</button>
+            </div>
+          </div>
+          <div class="ticket-wrap" id="ticketWrap"></div>
+          <div class="sp-actions">
+            <button class="btn primary" id="spBuy">1장 사서 긁기</button>
+            <button class="btn ghost" id="spReveal">한 번에 긁기</button>
+          </div>
+          <div class="sp-session" id="spSession"></div>
+          <p class="note">카드 그림과 게임 방식은 화면용으로 단순화한 것이며 실제 복권과 다릅니다. 당첨 확률만 공식 당첨 구조와 같습니다.</p>
+        </div>
+
+        <div class="card">
+          <h2>한 번에 많이 사 보기</h2>
+          <div class="sp-bulk-ctrl">
+            <div class="seg" id="spBulkN">
+              <button data-n="10">10장</button><button data-n="100" class="active">100장</button><button data-n="1000">1천장</button><button data-n="10000">1만장</button><button data-n="100000">10만장</button>
+            </div>
+            <button class="btn primary" id="spBulkGo">시뮬레이션</button>
+            <button class="btn ghost" id="spUntil">1등 나올 때까지</button>
+          </div>
+          <div id="spBulkResult"></div>
+          <div id="spStructure"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ───────────── 번호별 확률 ───────────── -->
     <section class="panel" id="tab-stats">
       <div class="kpis" id="kpis"></div>
@@ -264,6 +314,7 @@
   <script src="js/update.js"></script>
   <script src="js/tarot.js"></script>
   <script src="js/drum.js"></script>
+  <script src="js/speetto.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
