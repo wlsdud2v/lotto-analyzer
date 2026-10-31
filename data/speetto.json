@@ -1,6 +1,6 @@
 {
  "source": "https://www.dhlottery.co.kr/st/pblcnDsctn",
- "fetched_at": "2026-10-30T08:45:22.189Z",
+ "fetched_at": "2026-10-31T18:38:20.497Z",
  "games": {
   "SP1000": [
    {
@@ -55,7 +55,7 @@
     "game": "SP1000",
     "name": "스피또1000",
     "round": 109,
-    "status": "판매중",
+    "status": "판매종료",
     "shipRate": 100,
     "price": 1000,
     "rank1": {
