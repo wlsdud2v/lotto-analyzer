@@ -42,6 +42,8 @@ js/update.js        최신 회차 자동 업데이트
 js/jackpot.js       1등 당첨금 통계 · 다음 회차 예상 1등 당첨금
 js/teachers.js      로또 선생 추첨·운세 (브라우저·Node 공용)
 data/teachers.json  로또 선생 회차별 번호·운세 (tools/update_teachers.js 가 갱신)
+js/ads.js           Google AdSense 광고 (게시자 ID는 index.html 메타 태그, 슬롯 ID는 파일 위쪽 SLOTS)
+privacy.html        개인정보처리방침 (AdSense 필수)
 js/saju.js          사주팔자 · 절기(VSOP87) · 대운 · 오늘의 운세 계산
 js/tarot.js         타로 카드 해석 · 카드→번호 매핑
 js/drum.js          공기 혼합식 추첨기 물리 시뮬레이션 · 렌더링
@@ -53,6 +55,14 @@ tools/build_data.js JSON → lotto_data.js 변환
 tools/update_speetto.js 스피또 발행 현황 받아 data/speetto.json 갱신
 tools/update_data.js 새 회차 받아 data 파일 갱신 (+ .bat, 작업 스케줄러 등록 .bat)
 ```
+
+## 광고 (Google AdSense)
+1. **게시자 ID 넣기** — `index.html` 의 `<meta name="google-adsense-account" content="ca-pub-XXXXXXXXXXXXXXXX">` 를 본인 ID로 바꿈.
+   ID가 XXXX 그대로면 광고 코드가 아예 로드되지 않음. 안드로이드 앱(WebView)·로컬 파일에서도 광고는 꺼짐(앱 광고는 AdMob 으로 따로).
+2. **루트 도메인 저장소** — AdSense 는 `https://wlsdud2v.github.io/` 루트와 `/ads.txt` 를 확인하므로,
+   GitHub 에 `wlsdud2v.github.io` 저장소를 만들고 `deploy/wlsdud2v.github.io/` 안의 `index.html`, `ads.txt` 를 올림 (두 파일의 XXXX 도 본인 ID로).
+3. AdSense 에서 사이트 `wlsdud2v.github.io` 추가 → 메타 태그 방식으로 소유권 확인 → 검토 요청 (며칠~몇 주).
+4. 승인 후 **자동 광고**를 켜거나, 디스플레이 광고 단위를 만들어 `js/ads.js` 위쪽 `SLOTS` 에 슬롯 번호를 넣으면 각 화면 하단에 표시.
 
 ## 참고
 로또는 매 회 독립 시행이라 실제로 각 번호가 뽑힐 확률은 항상 6/45(13.33%), 1등 확률은 조합당 1/8,145,060입니다.

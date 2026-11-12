@@ -637,3 +637,9 @@ input.num { width: 64px; text-align: center; }
   .sj-lucky { grid-template-columns: minmax(0, 1fr); }
 }
 .sj-grid2 > .card { margin-top: 0; }
+
+/* ───────────── 광고 (js/ads.js) ───────────── */
+.ad-slot { margin: 28px auto 0; max-width: 970px; text-align: center; }
+.ad-slot::before { content: '광고'; display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: .05em; }
+.ad-slot:empty, .ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none; }
+.foot a { color: inherit; text-decoration: underline; margin-left: 6px; white-space: nowrap; }
