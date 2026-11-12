@@ -1,6 +1,6 @@
 {
  "source": "https://www.dhlottery.co.kr/st/pblcnDsctn",
- "fetched_at": "2026-11-11T16:18:32.043Z",
+ "fetched_at": "2026-11-12T03:54:10.059Z",
  "games": {
   "SP1000": [
    {
@@ -97,7 +97,7 @@
     "prize1": "5억원",
     "saleEnd": "2026-09-30",
     "payEnd": "2027-09-30",
-    "dataDate": "2026-11-06"
+    "dataDate": "2026-11-12"
    },
    {
     "game": "SP1000",
@@ -121,7 +121,7 @@
     "prize1": "5억원",
     "saleEnd": "2026-08-31",
     "payEnd": "2027-08-31",
-    "dataDate": "2026-11-06"
+    "dataDate": "2026-11-12"
    },
    {
     "game": "SP1000",
