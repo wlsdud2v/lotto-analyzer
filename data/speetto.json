@@ -1,8 +1,32 @@
 {
  "source": "https://www.dhlottery.co.kr/st/pblcnDsctn",
- "fetched_at": "2026-11-19T22:16:23.622Z",
+ "fetched_at": "2026-11-20T13:10:06.457Z",
  "games": {
   "SP1000": [
+   {
+    "game": "SP1000",
+    "name": "스피또1000",
+    "round": 112,
+    "status": "판매중",
+    "shipRate": 0,
+    "price": 1000,
+    "rank1": {
+     "left": 12,
+     "total": 12
+    },
+    "rank2": {
+     "left": 60,
+     "total": 60
+    },
+    "rank3": {
+     "left": 330000,
+     "total": 330000
+    },
+    "prize1": "5억원",
+    "saleEnd": "2026-12-31",
+    "payEnd": "2027-12-31",
+    "dataDate": "2026-11-20"
+   },
    {
     "game": "SP1000",
     "name": "스피또1000",
@@ -11,7 +35,7 @@
     "shipRate": 51,
     "price": 1000,
     "rank1": {
-     "left": 8,
+     "left": 7,
      "total": 11
     },
     "rank2": {
@@ -170,30 +194,6 @@
     "saleEnd": "2026-06-30",
     "payEnd": "2027-06-30",
     "dataDate": "2026-11-20"
-   },
-   {
-    "game": "SP1000",
-    "name": "스피또1000",
-    "round": 104,
-    "status": "판매종료",
-    "shipRate": 100,
-    "price": 1000,
-    "rank1": {
-     "left": 1,
-     "total": 11
-    },
-    "rank2": {
-     "left": 0,
-     "total": 55
-    },
-    "rank3": {
-     "left": 5823,
-     "total": 302500
-    },
-    "prize1": "5억원",
-    "saleEnd": "2026-05-31",
-    "payEnd": "2027-05-31",
-    "dataDate": "2026-11-20"
    }
   ],
   "SP2000": [
@@ -205,7 +205,7 @@
     "shipRate": 64,
     "price": 2000,
     "rank1": {
-     "left": 6,
+     "left": 4,
      "total": 8
     },
     "rank2": {
