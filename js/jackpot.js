@@ -21,8 +21,9 @@ const LottoJackpot = (() => {
   function estimate(draws) {
     const n = draws.length;
     if (n < 10) return null;
-    const last4 = draws.slice(-4).filter(hasMoney);
-    if (last4.length < 4) return null;
+    // 최근 회차에 당첨금 정보가 아직 없어도(추첨 직후 등) 그 앞의 회차들로 추정
+    const last4 = draws.slice(-8).filter(hasMoney).slice(-4);
+    if (last4.length < 2) return null;
 
     const sales = last4.reduce((s, d) => s + d.sales, 0) / last4.length;
 
@@ -43,6 +44,7 @@ const LottoJackpot = (() => {
 
     const pool = sales * ratio + carry;
     const recent = draws.slice(-52).filter(hasMoney);
+    if (!recent.length) return null;
     const avgWinners = recent.reduce((s, d) => s + d.winners, 0) / recent.length;
     const minW = Math.min(...recent.map(d => d.winners)), maxW = Math.max(...recent.map(d => d.winners));
     const scenarios = [1, 5, 10, 15, 20, 30].map(w => ({ winners: w, each: pool / w }));

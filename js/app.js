@@ -11,6 +11,7 @@
     source: '',
     range: 0,            // 0 = 전체
     recentN: 20,
+    trendN: 30,          // 패턴 추세 그래프 기간
     stats: null,
     pastKeys: new Set(),
     pref: new Map(),     // n -> 'fix' | 'exc'
@@ -320,12 +321,29 @@
   }
 
 
+  /** 프로그램(lotto/speetto/fortune) 안에서 지금 보이는 화면 id */
+  function activeTab(appId) {
+    const p = document.querySelector(`#app-${appId} .panel.active`);
+    return p ? p.id.replace(/^tab-/, '') : null;
+  }
+
+
+  /** 프로그램 안 화면 전환 */
+  function showTab(app, id) {
+    if (!app.querySelector('#tab-' + id)) return;
+    app.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === id));
+    app.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+    onViewChanged();
+    try { localStorage.setItem('lotto.tab.' + app.id, id); } catch (e) { /* 무시 */ }
+  }
+
+
   /** 보이는 화면이 바뀔 때: 추첨기 애니메이션, 스피또 데이터·긁기 판 */
   function onViewChanged() {
-    const activeTab = appId => { const t = document.querySelector(`#app-${appId} .tab.active`); return t ? t.dataset.tab : null; };
-    if (state.machine.m) state.machine.m.setVisible(state.app === 'lotto' && activeTab('lotto') === 'machine');
+    const lottoTab = activeTab('lotto');
+    if (state.machine.m) state.machine.m.setVisible(state.app === 'lotto' && lottoTab === 'machine');
     if (state.app === 'speetto') onSpeettoShown();
-    if (state.app === 'lotto' && activeTab('lotto') === 'teachers') onTeachersShown();
+    if (state.app === 'lotto' && (lottoTab === 'teachers' || lottoTab === 'recommend')) onTeachersShown();
     if (state.app === 'fortune') renderToday();
   }
 
@@ -709,6 +727,9 @@
     try {
       tc.data = await loadTeacherData();
       renderTeachers();
+    } catch (e) {
+      $('#tcPickInfo').textContent = '선생 번호를 불러오지 못했어요. 잠시 후 다시 열어 주세요.';
+      $('#tcInfo').textContent = '불러오지 못했어요.';
     } finally {
       tc.loading = false;
     }
@@ -805,8 +826,30 @@
         <div class="tc-acts acts">${setActions(i)}</div>
       </div>`;
     }).join('');
+    renderTcPick(all, bestRate, next, nextDate);
     renderTcRank();
     renderTcHist();
+  }
+
+
+  /** 추천 화면 위쪽: 네 선생의 이번 주 번호 (간단히) */
+  function renderTcPick(all, bestRate, next, nextDate) {
+    const data = state.tc.data;
+    $('#tcPickInfo').textContent = `${next}회 · ${nextDate} 추첨 · 이번 주 고정 번호`;
+    $('#tcPickList').innerHTML = all.map(({ t, st }, i) => {
+      const nums = data.picks[next][t.id];
+      const f = data.fortunes[next][t.id];
+      const stars = '★'.repeat(f.stars) + '☆'.repeat(5 - f.stars);
+      return `<div class="set tc-row ${st.rate === bestRate ? 'best' : ''}" style="--tc:${t.color}">
+        <div class="tc-row-head">
+          <img class="tc-ava sm" src="${t.photo}" alt="" width="40" height="40">
+          <b>${t.name}</b>${st.rate === bestRate ? '<span class="tc-badge">적중률 1위</span>' : ''}
+          <span class="tc-stars" title="이번 주 운세 ${f.stars}/5" aria-label="이번 주 운세 별 ${f.stars}개"><span class="st-full">${stars}</span><span class="st-short" hidden>★${f.stars}</span></span>
+        </div>
+        <div class="set-main"><div class="balls">${nums.map(n => ball(n)).join('')}</div></div>
+        <div class="acts">${setActions(i)}</div>
+      </div>`;
+    }).join('');
   }
 
 
@@ -1478,6 +1521,7 @@
 
     renderChart();
     renderStatsTable();
+    renderPatterns();
   }
 
 
@@ -1550,6 +1594,236 @@
   }
 
 
+  // ───────────────────────── 당첨 번호 패턴 ─────────────────────────
+
+  /** 무작위로 6개를 뽑을 때의 이론 확률 (미리 계산한 값) */
+  const THEORY = {
+    odd:   [0.00916, 0.07436, 0.22722, 0.33485, 0.25113, 0.09089, 0.01239],  // 홀수(23개) k개 = 높은 수(23~45) k개
+    run:   [0.47125, 0.40393, 0.1122, 0.01261],                              // 연속 쌍 0·1·2·3+
+    carry: [0.40056, 0.42413, 0.15147, 0.02384],                             // 이월 0·1·2·3+
+    dec:   [0.0306, 0.32965, 0.51688, 0.12277],                              // 구간 수 2이하·3·4·5
+  };
+  const DEC_SIZE = [10, 10, 10, 10, 5];
+  const END_SIZE = [4, 5, 5, 5, 5, 5, 4, 4, 4, 4];
+  const DEC_LBL = ['1~10', '11~20', '21~30', '31~40', '41~45'];
+
+  /** 회차별 모양 (전체 회차 기준, 이월은 바로 앞 회차와 비교) */
+  function drawFeatures() {
+    const all = state.allDraws;
+    if (state._feat && state._feat.src === all) return state._feat.list;
+    const list = all.map((d, i) => {
+      const n = d.nums;
+      let run = 0;
+      for (let k = 1; k < 6; k++) if (n[k] - n[k - 1] === 1) run++;
+      const prev = i > 0 && all[i - 1].no === d.no - 1 ? new Set(all[i - 1].nums) : null;
+      const ends = new Array(10).fill(0);
+      n.forEach(x => ends[x % 10]++);
+      return {
+        no: d.no,
+        odd: n.filter(x => x % 2).length,
+        high: n.filter(x => x >= 23).length,
+        sum: n.reduce((a, b) => a + b, 0),
+        run,
+        carry: prev ? n.filter(x => prev.has(x)).length : null,
+        decs: new Set(n.map(x => Math.min(4, Math.floor((x - 1) / 10)))).size,
+        sameEnd: Math.max(...ends),
+      };
+    });
+    state._feat = { src: all, list };
+    return list;
+  }
+
+  const scopeFeatures = () => {
+    const f = drawFeatures();
+    return state.range ? f.slice(-state.range) : f;
+  };
+
+  /** 값별 비율 */
+  function distOf(feats, key, buckets, map = v => v) {
+    const cnt = new Array(buckets).fill(0);
+    let tot = 0;
+    feats.forEach(f => { if (f[key] == null) return; cnt[Math.min(buckets - 1, map(f[key]))]++; tot++; });
+    return cnt.map(c => (tot ? c / tot : 0));
+  }
+
+  const rarity = p => (p >= 0.25 ? ['흔함', 'common'] : p >= 0.1 ? ['보통', 'mid'] : ['드묾', 'rare']);
+
+  /**
+   * 분포 막대 (HTML) — rows: [{ label, v(실제 비율), t(이론 비율|null), on(지난 회차) }]
+   */
+  function distBars(rows, note = '이론') {
+    const max = Math.max(...rows.map(r => Math.max(r.v, r.t || 0)), 0.01);
+    return `<div class="dist">${rows.map(r => `
+      <div class="dist-row${r.on ? ' on' : ''}">
+        <span class="dl">${r.label}</span>
+        <span class="dt"><i style="width:${(r.v / max) * 100}%"></i>${r.t != null ? `<u style="left:${(r.t / max) * 100}%" title="${note} ${pct(r.t)}"></u>` : ''}</span>
+        <span class="dv">${pct(r.v)}</span>
+      </div>`).join('')}</div>
+      <p class="hint dist-key">${rows.some(r => r.on) ? '<i class="key-on"></i> 지난 회 모양' : ''}${rows.some(r => r.t != null) ? `<u></u> ${note} 비율` : ''}</p>`;
+  }
+
+  /**
+   * 회차별 추세 꺾은선 (SVG)
+   * opt: { min, max, ref(기준선), refLbl, band:[lo,hi], ma(이동평균 회차 수), step(눈금 간격) }
+   */
+  function trendSvg(feats, key, opt) {
+    const pts = feats.filter(f => f[key] != null);
+    if (pts.length < 2) return '<p class="empty">회차가 부족합니다</p>';
+    const W = 400, H = 196, L = 30, R = 12, T = 12, B = 32;
+    const { min, max } = opt;
+    const x = i => L + (W - L - R) * (i / (pts.length - 1));
+    const y = v => T + (H - T - B) * (1 - (v - min) / (max - min));
+    let g = '';
+    for (let v = min; v <= max; v += opt.step) {
+      g += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    }
+    if (opt.band) g += `<rect class="band" x="${L}" width="${W - L - R}" y="${y(opt.band[1])}" height="${y(opt.band[0]) - y(opt.band[1])}"/>`;
+    if (opt.ref != null) g += `<line class="exp" x1="${L}" x2="${W - R}" y1="${y(opt.ref)}" y2="${y(opt.ref)}"/>`;
+    const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+    let ma = '';
+    if (opt.ma) {
+      const m = pts.map((p, i) => {
+        const w = pts.slice(Math.max(0, i - opt.ma + 1), i + 1);
+        return w.reduce((a, b) => a + b[key], 0) / w.length;
+      });
+      ma = `<path class="ma" d="${m.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}"/>`;
+    }
+    const r = pts.length > 60 ? 1.8 : 3.2;
+    const dots = pts.map((p, i) => `<circle class="${i === pts.length - 1 ? 'pt last' : 'pt'}" cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="${i === pts.length - 1 ? 5 : r}"><title>${p.no}회: ${p[key]}</title></circle>`).join('');
+    const xl = `<text class="ax" x="${L}" y="${H - 6}">${pts[0].no}회</text><text class="ax" x="${W - R}" y="${H - 6}" text-anchor="end">${pts[pts.length - 1].no}회</text>`;
+    return `<div class="chart pt-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${pts.length}회 ${opt.aria} 추세">${g}<path class="ln" d="${line}"/>${ma}${dots}${xl}</svg></div>`;
+  }
+
+  const avg = (arr, key) => {
+    const v = arr.filter(f => f[key] != null);
+    return v.length ? v.reduce((a, b) => a + b[key], 0) / v.length : 0;
+  };
+
+  const SPLIT_LBL = (k, a, b) => `${a} ${k} : ${b} ${6 - k}`;
+
+
+  function renderPatterns() {
+    if (!state.allDraws.length || !$('#ptLatest')) return;
+    const sc = scopeFeatures();
+    const all = drawFeatures();
+    const last = all[all.length - 1];
+    const N = Math.min(state.trendN, all.length);
+    const tr = all.slice(-N);
+    const s = state.stats;
+
+    // 분포
+    const dOdd = distOf(sc, 'odd', 7), dHigh = distOf(sc, 'high', 7);
+    const dRun = distOf(sc, 'run', 4), dCarry = distOf(sc, 'carry', 4);
+    const dDec = distOf(sc, 'decs', 4, v => Math.max(0, v - 2));
+    const sumIn = sc.filter(f => f.sum >= s.sumP10 && f.sum <= s.sumP90).length / sc.length;
+    const sumBucket = v => (v < 100 ? 0 : v < 120 ? 1 : v < 140 ? 2 : v < 160 ? 3 : v < 180 ? 4 : 5);
+    const dSum = distOf(sc, 'sum', 6, sumBucket);
+
+    // ── 지난 회차 모양 ──
+    $('#ptLatestTitle').textContent = `${last.no}회 번호 모양`;
+    const tile = (label, val, p, extra = '') => {
+      const [w, c] = rarity(p);
+      return `<div class="pt-tile"><div class="k">${label}</div><div class="v">${val}</div><div class="s"><span class="rt ${c}">${w}</span>${extra || `같은 모양 ${pct(p, 0)}`}</div></div>`;
+    };
+    $('#ptLatest').innerHTML = [
+      tile('홀 : 짝', `${last.odd} : ${6 - last.odd}`, dOdd[last.odd]),
+      tile('낮은 : 높은', `${6 - last.high} : ${last.high}`, dHigh[last.high]),
+      tile('합계', last.sum, dSum[sumBucket(last.sum)], `${['100 미만', '100~119', '120~139', '140~159', '160~179', '180 이상'][sumBucket(last.sum)]} ${pct(dSum[sumBucket(last.sum)], 0)}`),
+      tile('연속 번호', last.run ? `${last.run}쌍` : '없음', dRun[Math.min(3, last.run)]),
+      last.carry != null ? tile('이월 번호', `${last.carry}개`, dCarry[Math.min(3, last.carry)]) : '',
+      tile('번호 구간', `${last.decs}개 구간`, dDec[Math.max(0, last.decs - 2)]),
+    ].join('');
+
+    const recentTxt = `최근 ${N}회`;
+
+    // ── 홀짝 ──
+    const oddAvg = avg(tr, 'odd');
+    $('#ptOddHint').innerHTML = `${recentTxt} 평균 홀수 <b>${oddAvg.toFixed(1)}개</b> (이론 3.1개)`;
+    $('#ptOdd').innerHTML = trendSvg(tr, 'odd', { min: 0, max: 6, step: 1, ref: 3, aria: '홀수 개수' }) +
+      `<h3 class="pt-sub">홀 : 짝 분포 <small>분석 기준 ${fmt(sc.length)}회</small></h3>` +
+      distBars([6, 5, 4, 3, 2, 1, 0].map(k => ({ label: SPLIT_LBL(k, '홀', '짝'), v: dOdd[k], t: THEORY.odd[k], on: last.odd === k })));
+
+    // ── 고저 ──
+    const highAvg = avg(tr, 'high');
+    $('#ptHighHint').innerHTML = `${recentTxt} 평균 높은 수 <b>${highAvg.toFixed(1)}개</b> (이론 3.1개)`;
+    $('#ptHigh').innerHTML = trendSvg(tr, 'high', { min: 0, max: 6, step: 1, ref: 3, aria: '높은 수 개수' }) +
+      `<h3 class="pt-sub">낮은 수 : 높은 수 분포 <small>분석 기준 ${fmt(sc.length)}회</small></h3>` +
+      distBars([0, 1, 2, 3, 4, 5, 6].map(k => ({ label: `낮 ${6 - k} : 높 ${k}`, v: dHigh[k], t: THEORY.odd[k], on: last.high === k })));
+
+    // ── 합계 ──
+    const sumAvg = avg(tr, 'sum');
+    const lo = Math.min(...tr.map(f => f.sum)), hi = Math.max(...tr.map(f => f.sum));
+    $('#ptSumHint').innerHTML = `${recentTxt} 평균 <b>${sumAvg.toFixed(0)}</b> · 최저 ${lo} · 최고 ${hi}`;
+    const sMin = Math.min(40, Math.floor(lo / 20) * 20), sMax = Math.max(240, Math.ceil(hi / 20) * 20);
+    $('#ptSum').innerHTML = trendSvg(tr, 'sum', { min: sMin, max: sMax, step: 40, ref: 138, band: [s.sumP10, s.sumP90], ma: 5, aria: '번호 합계' }) +
+      `<div class="pt-legend"><span><i class="lg-band"></i>80% 구간 ${s.sumP10}~${s.sumP90}</span><span><i class="lg-ma"></i>5회 평균</span><span><i class="lg-ref"></i>이론 평균 138</span></div>` +
+      `<h3 class="pt-sub">합계 구간 분포 <small>분석 기준 ${fmt(sc.length)}회 · 평균 ${s.sumAvg.toFixed(1)}</small></h3>` +
+      distBars(['100 미만', '100~119', '120~139', '140~159', '160~179', '180 이상'].map((label, k) => ({ label, v: dSum[k], t: null, on: sumBucket(last.sum) === k }))) +
+      `<p class="hint">분석 기준 회차의 ${pct(sumIn, 0)}가 ${s.sumP10}~${s.sumP90} 사이였습니다.</p>`;
+
+    // ── 연속 번호 ──
+    const runRate = tr.filter(f => f.run > 0).length / tr.length;
+    $('#ptRunHint').innerHTML = `${recentTxt} 중 <b>${tr.filter(f => f.run > 0).length}회(${pct(runRate, 0)})</b> 연속 번호 포함 (이론 52.9%)`;
+    $('#ptRun').innerHTML = `<div class="pt-strip" aria-label="최근 회차 연속 번호">${tr.slice(-20).map(f => `<span class="${f.run ? 'y' : ''}" title="${f.no}회: 연속 ${f.run}쌍"><b>${f.run || '·'}</b><small>${f.no % 1000}</small></span>`).join('')}</div>
+      <p class="hint">최근 ${Math.min(20, tr.length)}회 — 칸 숫자 = 연속 쌍 수, 아래는 회차 끝자리</p>` +
+      `<h3 class="pt-sub">연속 쌍 개수 분포 <small>분석 기준 ${fmt(sc.length)}회</small></h3>` +
+      distBars(['없음', '1쌍', '2쌍', '3쌍 이상'].map((label, k) => ({ label, v: dRun[k], t: THEORY.run[k], on: Math.min(3, last.run) === k })));
+
+    // ── 이월 ──
+    const trC = tr.filter(f => f.carry != null);
+    const carryAvg = avg(trC, 'carry');
+    $('#ptCarryHint').innerHTML = `${recentTxt} 평균 <b>${carryAvg.toFixed(2)}개</b> 이월 (이론 0.80개)`;
+    $('#ptCarry').innerHTML = trendSvg(trC, 'carry', { min: 0, max: 4, step: 1, ref: 0.8, aria: '이월 번호 개수' }) +
+      `<h3 class="pt-sub">이월 개수 분포 <small>분석 기준 ${fmt(sc.length)}회</small></h3>` +
+      distBars(['0개', '1개', '2개', '3개 이상'].map((label, k) => ({ label, v: dCarry[k], t: THEORY.carry[k], on: last.carry != null && Math.min(3, last.carry) === k })));
+
+    // ── 번호대 ──
+    const trDraws = state.allDraws.slice(-N);
+    const decCnt = [0, 0, 0, 0, 0];
+    trDraws.forEach(d => d.nums.forEach(n => decCnt[Math.min(4, Math.floor((n - 1) / 10))]++));
+    const decRows = decCnt.map((c, k) => ({ k, c, e: (N * 6 * DEC_SIZE[k]) / 45 }));
+    const best = [...decRows].sort((a, b) => b.c / b.e - a.c / a.e);
+    $('#ptDecHint').innerHTML = `${recentTxt} 강세 <b>${DEC_LBL[best[0].k]}</b> · 약세 <b>${DEC_LBL[best[4].k]}</b>`;
+    const maxC = Math.max(...decRows.map(r => Math.max(r.c, r.e)));
+    $('#ptDec').innerHTML = `<div class="dec-bars">${decRows.map(r => {
+      const rr = r.c / r.e, cls = rr > 1.15 ? 'up' : rr < 0.85 ? 'down' : '';
+      return `<div class="dec-row"><span class="dl"><i class="dd d${r.k + 1}"></i>${DEC_LBL[r.k]}</span>
+        <span class="dt"><i class="d${r.k + 1}" style="width:${(r.c / maxC) * 100}%"></i><u style="left:${(r.e / maxC) * 100}%"></u></span>
+        <span class="dv">${r.c}회 <small class="${cls}">${pct(rr, 0)}</small></span></div>`;
+    }).join('')}</div><p class="hint dist-key"><u></u> ${recentTxt} 기대 횟수 · %는 기대 대비</p>` +
+      `<h3 class="pt-sub">한 회차에 섞인 구간 수 <small>분석 기준 ${fmt(sc.length)}회</small></h3>` +
+      distBars(['2개 이하', '3개', '4개', '5개 모두'].map((label, k) => ({ label, v: dDec[k], t: THEORY.dec[k], on: Math.max(0, last.decs - 2) === k })));
+
+    // ── 끝수 ──
+    const scDraws = scopeDraws();
+    const endCnt = new Array(10).fill(0);
+    scDraws.forEach(d => d.nums.forEach(n => endCnt[n % 10]++));
+    const endRows = endCnt.map((c, k) => ({ k, c, ratio: c / ((scDraws.length * 6 * END_SIZE[k]) / 45) }));
+    const eSorted = [...endRows].sort((a, b) => b.ratio - a.ratio);
+    const sameEnd = sc.filter(f => f.sameEnd >= 2).length / sc.length;
+    $('#ptEndHint').innerHTML = `강세 끝수 <b>${eSorted[0].k}</b> · 약세 끝수 <b>${eSorted[9].k}</b>`;
+    const rs = endRows.map(r => r.ratio);
+    const eLo = Math.min(0.85, Math.min(...rs) - 0.03), eHi = Math.max(1.15, Math.max(...rs) + 0.03);
+    const eh = v => ((v - eLo) / (eHi - eLo)) * 100;
+    $('#ptEnd').innerHTML = `<div class="end-grid">${endRows.map(r => {
+      const cls = r.ratio > 1.05 ? 'up' : r.ratio < 0.95 ? 'down' : '';
+      return `<div class="end-col" title="끝수 ${r.k}: ${r.c}회 (이론 대비 ${pct(r.ratio, 0)})"><span class="ev ${cls}">${Math.round(r.ratio * 100)}</span><span class="eb"><i class="${cls}" style="height:${eh(r.ratio)}%"></i><u style="bottom:${eh(1)}%"></u></span><b>${r.k}</b></div>`;
+    }).join('')}</div>
+      <p class="hint dist-key"><u></u> 이론 평균 = 100 · 위 숫자는 이론 대비 % · 분석 기준 ${fmt(scDraws.length)}회</p>
+      <p class="pt-fact">같은 끝수가 2개 이상 들어간 회차 <b>${pct(sameEnd, 0)}</b>${last.sameEnd >= 2 ? ' · 지난 회 해당' : ''}</p>`;
+
+    // ── 번호 쌍 ──
+    const pairs = [];
+    for (let a = 1; a <= 45; a++) for (let b = a + 1; b <= 45; b++) pairs.push([a, b, s.co[a][b]]);
+    pairs.sort((p, q) => q[2] - p[2] || p[0] - q[0]);
+    const expPair = s.total * 30 / 1980;
+    $('#ptPairHint').innerHTML = `기대 횟수 약 <b>${expPair.toFixed(1)}회</b> · 분석 기준 ${fmt(s.total)}회`;
+    $('#ptPair').innerHTML = `<ol class="pair-list">${pairs.slice(0, 10).map(([a, b, c], i) =>
+      `<li><span class="rk">${i + 1}</span><span class="balls">${ball(a, 'sm')}${ball(b, 'sm')}</span><span class="pc"><b>${c}회</b><small>기대 대비 ${pct(c / expPair, 0)}</small></span></li>`).join('')}</ol>`;
+  }
+
+
+
   // ───────────────────────── 내 번호 확인 ─────────────────────────
 
   function onCheckClick(n) {
@@ -1593,12 +1867,18 @@
     initSpeetto();
     initFortune();
     // 탭: 각 프로그램(로또 / 스피또) 안에서만 전환
-    $$('.tab').forEach(t => t.addEventListener('click', () => {
-      const app = t.closest('.app');
-      app.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
-      app.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t.dataset.tab));
-      onViewChanged();
-      try { localStorage.setItem('lotto.tab.' + app.id, t.dataset.tab); } catch (e) { /* 무시 */ }
+    $$('.app .tab').forEach(t => t.addEventListener('click', () => showTab(t.closest('.app'), t.dataset.tab)));
+
+    // 아래 메뉴 (모든 화면 공통): 로또 화면 전환 + 운세 프로그램
+    $$('.bnav .bn').forEach(b => b.addEventListener('click', () => {
+      const go = b.dataset.go;
+      if (go === 'fortune') {
+        if (state.app !== 'fortune') setApp('fortune', true); else window.scrollTo({ top: 0 });
+        return;
+      }
+      if (state.app !== 'lotto') setApp('lotto', true);
+      showTab($('#app-lotto'), go);
+      window.scrollTo({ top: 0 });
     }));
     $$('.app').forEach(app => {
       try {
@@ -1672,6 +1952,7 @@
     });
     $('#tarotReroll').addEventListener('click', () => generateTarot(true));
     $('#tcGrid').addEventListener('click', onSetAction(() => state.tc.list, () => '로또 선생 번호'));
+    $('#tcPickList').addEventListener('click', onSetAction(() => state.tc.list, () => '로또 선생 번호'));
     $('#tcPeriod').addEventListener('click', e => {
       const b = e.target.closest('button[data-p]');
       if (!b) return;
@@ -1718,6 +1999,14 @@
       const k = th.dataset.k;
       state.sort = { key: k, asc: state.sort.key === k ? !state.sort.asc : k === 'n' };
       renderStatsTable();
+    });
+
+    $('#trendSeg').addEventListener('click', e => {
+      const b = e.target.closest('button[data-n]');
+      if (!b) return;
+      state.trendN = +b.dataset.n;
+      $$('#trendSeg button').forEach(x => x.classList.toggle('active', x === b));
+      renderPatterns();
     });
 
     $('#checkReset').addEventListener('click', () => { state.checkSel = []; renderCheck(); });

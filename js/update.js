@@ -42,17 +42,23 @@ const LottoUpdater = (() => {
   const getJson = url => getText(url).then(t => JSON.parse(t));
 
 
+  const hasMoney = d => d.winners != null && d.sales > 0;
+
   const toDraw = d => {
-    const first = (d.divisions && d.divisions[0]) || {};
-    return {
+    const draw = {
       no: +d.draw_no,
       date: String(d.date).slice(0, 10),
       nums: d.numbers.map(Number).sort((a, b) => a - b),
       bonus: +d.bonus_no,
-      prize: first.winners ? +first.prize : 0,
-      winners: +first.winners || 0,
-      sales: +d.total_sales_amount || 0,
     };
+    // 추첨 직후에는 원본에 당첨금·판매액이 아직 없을 수 있음 → 0으로 채우지 않고 '정보 없음'으로 둠
+    const first = d.divisions && d.divisions[0];
+    if (first && first.winners != null && +d.total_sales_amount > 0) {
+      draw.prize = first.winners ? +first.prize : 0;
+      draw.winners = +first.winners || 0;
+      draw.sales = +d.total_sales_amount;
+    }
+    return draw;
   };
 
 
@@ -64,11 +70,13 @@ const LottoUpdater = (() => {
 
 
   /**
+   * 새 회차 추가 + 최근 회차 중 당첨금 정보가 빠진 회차 다시 받기.
    * @returns {Promise<{status:'not-due'|'throttled'|'up-to-date'|'updated', added?:Array, latestNo?:number}>}
    */
   async function check(draws, { force = false } = {}) {
+    const missing = draws.slice(-6).filter(d => !hasMoney(d)).map(d => d.no);
     if (!force) {
-      if (!isDue(draws)) return { status: 'not-due' };
+      if (!isDue(draws) && !missing.length) return { status: 'not-due' };
       let last = 0;
       try { last = +localStorage.getItem(CHECK_KEY) || 0; } catch (e) { /* 무시 */ }
       if (Date.now() - last < THROTTLE_MS) return { status: 'throttled' };
@@ -77,17 +85,29 @@ const LottoUpdater = (() => {
 
     const have = draws[draws.length - 1].no;
     const latest = await getJson(`${BASE}/latest.json`);
-    if (latest.draw_no <= have) return { status: 'up-to-date', latestNo: latest.draw_no };
 
-    let list;
-    if (latest.draw_no - have > 30) {
-      list = (await getJson(`${BASE}/all.json`)).filter(d => d.draw_no > have);
-    } else {
-      list = [];
-      for (let no = have + 1; no < latest.draw_no; no++) list.push(await getJson(`${BASE}/${no}.json`));
-      list.push(latest);
+    let list = [];
+    if (latest.draw_no > have) {
+      if (latest.draw_no - have > 30) {
+        list = (await getJson(`${BASE}/all.json`)).filter(d => d.draw_no > have);
+      } else {
+        for (let no = have + 1; no < latest.draw_no; no++) list.push(await getJson(`${BASE}/${no}.json`));
+        list.push(latest);
+      }
     }
-    return { status: 'updated', added: list.map(toDraw), latestNo: latest.draw_no };
+    const fresh = list.map(toDraw);
+
+    // 당첨금 정보 보충 (원본에도 아직 없으면 건너뜀 — 30분 뒤 다시 시도)
+    const repaired = [];
+    for (const no of missing) {
+      try {
+        const d = toDraw(no === latest.draw_no ? latest : await getJson(`${BASE}/${no}.json`));
+        if (hasMoney(d)) repaired.push(d);
+      } catch (e) { /* 다음에 다시 */ }
+    }
+
+    if (!fresh.length && !repaired.length) return { status: 'up-to-date', latestNo: latest.draw_no };
+    return { status: 'updated', added: [...repaired, ...fresh], latestNo: latest.draw_no };
   }
 
 

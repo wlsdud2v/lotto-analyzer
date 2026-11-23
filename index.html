@@ -20,7 +20,7 @@
   <script>try { var t = localStorage.getItem('lotto.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261123c">
 </head>
 <body data-app="lotto">
   <!-- ───────────── 아이콘 ───────────── -->
@@ -99,6 +99,22 @@
         </div>
       </section>
 
+      <!-- 로또 선생 추천 (이번 주 고정 번호) -->
+      <section class="card tc-pick" id="tcPick">
+        <div class="card-head">
+          <h2><svg class="ic"><use href="#i-person"/></svg>로또 선생 추천</h2>
+          <button class="tab link-btn" data-tab="teachers">자세히<svg class="ic"><use href="#i-back"/></svg></button>
+        </div>
+        <p class="hint" id="tcPickInfo">불러오는 중…</p>
+        <div class="set-list" id="tcPickList"></div>
+      </section>
+
+      <!-- 직접 추천받기 -->
+      <div class="sec-h" id="selfPick">
+        <h2><svg class="ic"><use href="#i-sliders"/></svg>직접 추천받기</h2>
+        <p>방식과 조건을 골라 나만의 번호 만들기</p>
+      </div>
+
       <!-- 1단계: 추천 방식 -->
       <section class="card step">
         <h2 class="step-h"><span class="step-n">1</span>추천 방식
@@ -170,7 +186,7 @@
       <!-- 결과 -->
       <section class="card result-card" id="resultCard">
         <div class="card-head">
-          <h2>추천 번호</h2>
+          <h2>내가 받은 번호</h2>
           <span class="hint" id="genInfo"></span>
         </div>
         <div id="results" class="set-list"></div>
@@ -224,6 +240,109 @@
           <p>실제 추첨에서 각 번호가 뽑힐 확률은 과거와 무관하게 항상 6/45 = 13.33%이며, 1등 확률은 조합당 1/8,145,060입니다.</p>
         </div>
       </details>
+
+      <!-- ───── 당첨 번호 패턴 ───── -->
+      <div class="sec-h">
+        <h2><svg class="ic"><use href="#i-spark"/></svg>당첨 번호 패턴</h2>
+        <p>홀짝·합계·연속 번호 같은 조합의 모양을 봅니다</p>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 id="ptLatestTitle">지난 회차 모양</h2>
+          <button class="info-btn" data-info="info-ptLatest" data-title="지난 회차 모양" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
+        <div class="pt-tiles" id="ptLatest"></div>
+        <div class="info-src" id="info-ptLatest" hidden>
+          <p>가장 최근 당첨 번호 6개의 모양입니다. 아래 작은 글씨는 ‘분석 기준’ 회차 중 같은 모양이 나온 비율입니다.</p>
+          <p><b>흔함</b> 25% 이상 · <b>보통</b> 10~25% · <b>드묾</b> 10% 미만</p>
+        </div>
+      </section>
+
+      <div class="pt-window">
+        <span>추세 그래프 기간</span>
+        <div class="seg" id="trendSeg" role="group" aria-label="추세 그래프 기간">
+          <button type="button" data-n="20">20회</button>
+          <button type="button" data-n="30" class="active">30회</button>
+          <button type="button" data-n="50">50회</button>
+          <button type="button" data-n="100">100회</button>
+        </div>
+      </div>
+
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-scale"/></svg>홀수·짝수 추세<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptOddHint"></span>
+          <button class="info-btn" data-info="info-ptOdd" data-title="홀수·짝수 추세" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptOdd"></div>
+        <div class="info-src" id="info-ptOdd" hidden>
+          <p>당첨 번호 6개 중 <b>홀수가 몇 개</b>였는지 회차별로 보여 줍니다. 위쪽 그래프는 최근 흐름, 아래 막대는 ‘분석 기준’ 회차 전체의 분포입니다.</p>
+          <p>막대 위의 세로 선은 완전 무작위일 때의 이론 비율입니다. 1~45 중 홀수 23개·짝수 22개라 3:3(33.5%), 4:2(25.1%), 2:4(22.7%) 순으로 흔합니다.</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-sliders"/></svg>낮은 수·높은 수 추세<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptHighHint"></span>
+          <button class="info-btn" data-info="info-ptHigh" data-title="낮은 수·높은 수 추세" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptHigh"></div>
+        <div class="info-src" id="info-ptHigh" hidden>
+          <p><b>낮은 수 1~22</b>, <b>높은 수 23~45</b>로 나눠 높은 수가 몇 개였는지 봅니다.</p>
+          <p>높은 수가 23개라 이론 분포는 홀짝과 같습니다 (3:3이 33.5%로 가장 흔함).</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-chart"/></svg>번호 합계 추세<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptSumHint"></span>
+          <button class="info-btn" data-info="info-ptSum" data-title="번호 합계 추세" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptSum"></div>
+        <div class="info-src" id="info-ptSum" hidden>
+          <p>당첨 번호 6개를 모두 더한 값입니다. 가능한 범위는 21~255, 이론 평균은 <b>138</b>입니다.</p>
+          <p>그래프의 옅은 띠는 ‘분석 기준’ 회차 합계의 하위 10% ~ 상위 10% 구간(전체의 80%가 들어가는 범위)이고, 굵은 선은 최근 5회 평균선입니다.</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-ball"/></svg>연속 번호 추세<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptRunHint"></span>
+          <button class="info-btn" data-info="info-ptRun" data-title="연속 번호 추세" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptRun"></div>
+        <div class="info-src" id="info-ptRun" hidden>
+          <p>12·13처럼 <b>바로 이어지는 번호 쌍</b>이 몇 개 있었는지 봅니다. 12·13·14는 연속 쌍 2개로 셉니다.</p>
+          <p>무작위로 뽑아도 연속 번호가 한 쌍 이상 나올 확률은 <b>약 52.9%</b> — 두 번에 한 번은 연속 번호가 나옵니다.</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-refresh"/></svg>이월 번호 추세<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptCarryHint"></span>
+          <button class="info-btn" data-info="info-ptCarry" data-title="이월 번호 추세" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptCarry"></div>
+        <div class="info-src" id="info-ptCarry" hidden>
+          <p>바로 앞 회차 당첨 번호(보너스 제외)가 <b>다음 회차에 다시 나온 개수</b>입니다.</p>
+          <p>이론상 0개 40.1%, 1개 42.4%, 2개 15.1%, 3개 이상 2.4%입니다.</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-grid"/></svg>번호대(구간)별 흐름<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptDecHint"></span>
+          <button class="info-btn" data-info="info-ptDec" data-title="번호대(구간)별 흐름" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptDec"></div>
+        <div class="info-src" id="info-ptDec" hidden>
+          <p>공 색깔과 같은 다섯 구간(1~10, 11~20, 21~30, 31~40, 41~45)이 <b>최근 몇 번 나왔는지</b> 기대값과 비교합니다. 41~45는 번호가 5개뿐이라 기대값도 절반입니다.</p>
+          <p>아래 막대는 한 회차에 몇 개 구간이 섞였는지의 분포입니다 (이론상 4개 구간 51.7%, 3개 33.0%).</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-dots"/></svg>끝수(일의 자리) 분포<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptEndHint"></span>
+          <button class="info-btn" data-info="info-ptEnd" data-title="끝수(일의 자리) 분포" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptEnd"></div>
+        <div class="info-src" id="info-ptEnd" hidden>
+          <p>번호의 <b>일의 자리 숫자</b>별 출현 횟수입니다. 끝수 0(10·20·30·40)과 6~9는 번호가 4개, 1~5는 5개라 기대값이 다릅니다.</p>
+          <p>‘이론 대비’ 100%가 평균이며, 같은 끝수가 2개 이상 들어간 회차 비율도 함께 보여 줍니다.</p></div>
+      </details>
+      <details class="card fold pt-fold">
+        <summary><svg class="ic"><use href="#i-star"/></svg>자주 함께 나온 번호 쌍<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint" id="ptPairHint"></span>
+          <button class="info-btn" data-info="info-ptPair" data-title="자주 함께 나온 번호 쌍" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div id="ptPair"></div>
+        <div class="info-src" id="info-ptPair" hidden>
+          <p>‘분석 기준’ 회차에서 <b>같은 회차에 함께 당첨된 횟수</b>가 많은 번호 두 개의 조합입니다.</p>
+          <p>무작위일 때 한 쌍이 함께 나올 기대 횟수는 회차 수 × 1.52% 정도입니다.</p></div>
+      </details>
+
+      <p class="hint pt-note">패턴은 과거 기록일 뿐, 매 회 추첨은 독립이라 다음 회차 확률을 바꾸지 않습니다.</p>
     </section>
 
     <!-- ═════════════ ③ 내 번호 ═════════════ -->
@@ -263,7 +382,6 @@
       <h2 class="more-h">다른 프로그램</h2>
       <div class="tiles">
         <button class="tile app-btn" data-app="speetto"><svg class="ic"><use href="#i-scratch"/></svg><b>스피또</b><span>즉석 복권 현황 · 긁기</span></button>
-        <button class="tile app-btn" data-app="fortune"><svg class="ic"><use href="#i-yin"/></svg><b>운세</b><span>사주 · 오늘의 운세</span></button>
       </div>
     </section>
 
@@ -411,13 +529,6 @@
       통계는 재미와 참고용입니다. 로또는 매 회 독립적인 무작위 추첨이므로 과거 데이터로 당첨을 예측할 수 없습니다. <a href="privacy.html">개인정보처리방침</a>
     </footer>
 
-    <!-- ───────────── 아래 메뉴 (휴대폰 엄지 위치) ───────────── -->
-    <nav class="bnav" aria-label="주 메뉴">
-      <button class="tab active is-on" data-tab="recommend"><svg class="ic"><use href="#i-spark"/></svg><span>추천</span></button>
-      <button class="tab" data-tab="stats"><svg class="ic"><use href="#i-chart"/></svg><span>분석</span></button>
-      <button class="tab" data-tab="check"><svg class="ic"><use href="#i-ticket"/></svg><span>내 번호</span></button>
-      <button class="tab" data-tab="more"><svg class="ic"><use href="#i-grid"/></svg><span>더보기</span></button>
-    </nav>
   </div>
 
   <!-- ═════════════ 스피또 ═════════════ -->
@@ -550,6 +661,15 @@
   </div>
   </main>
 
+  <!-- ───────────── 아래 메뉴 (휴대폰 엄지 위치 · 모든 화면 공통) ───────────── -->
+  <nav class="bnav" aria-label="주 메뉴">
+    <button class="bn is-on" data-go="recommend"><svg class="ic"><use href="#i-spark"/></svg><span>추천</span></button>
+    <button class="bn" data-go="stats"><svg class="ic"><use href="#i-chart"/></svg><span>분석</span></button>
+    <button class="bn" data-go="check"><svg class="ic"><use href="#i-ticket"/></svg><span>내 번호</span></button>
+    <button class="bn" data-go="fortune"><svg class="ic"><use href="#i-yin"/></svg><span>운세</span></button>
+    <button class="bn" data-go="more"><svg class="ic"><use href="#i-grid"/></svg><span>더보기</span></button>
+  </nav>
+
   <!-- ───────────── 메뉴 (오른쪽 위 ☰) ───────────── -->
   <dialog class="sheet" id="menuSheet" aria-label="메뉴">
     <div class="sheet-head"><b>메뉴</b><button class="icon-btn" data-close aria-label="닫기"><svg class="ic"><use href="#i-x"/></svg></button></div>
@@ -609,18 +729,18 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="data/lotto_data.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/update.js"></script>
-  <script src="js/tarot.js"></script>
-  <script src="js/drum.js"></script>
-  <script src="js/speetto.js"></script>
-  <script src="js/teachers.js"></script>
-  <script src="js/jackpot.js"></script>
-  <script src="js/saju.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/ads.js"></script>
+  <script src="data/lotto_data.js?v=20261123c"></script>
+  <script src="js/data.js?v=20261123c"></script>
+  <script src="js/engine.js?v=20261123c"></script>
+  <script src="js/update.js?v=20261123c"></script>
+  <script src="js/tarot.js?v=20261123c"></script>
+  <script src="js/drum.js?v=20261123c"></script>
+  <script src="js/speetto.js?v=20261123c"></script>
+  <script src="js/teachers.js?v=20261123c"></script>
+  <script src="js/jackpot.js?v=20261123c"></script>
+  <script src="js/saju.js?v=20261123c"></script>
+  <script src="js/app.js?v=20261123c"></script>
+  <script src="js/ui.js?v=20261123c"></script>
+  <script src="js/ads.js?v=20261123c"></script>
 </body>
 </html>

@@ -115,25 +115,31 @@
       return;
     }
 
-    // 로또 화면 전환 (아래 메뉴 · 더보기 타일 · 뒤로)
-    const tab = t.closest('#app-lotto .tab');
-    if (tab) syncNav(tab.dataset.tab, true);
+    // 로또 화면 전환 (더보기 타일 · 뒤로 · 자세히) → 맨 위로
+    if (t.closest('#app-lotto .tab')) window.scrollTo({ top: 0 });
   });
 
 
-  /** 아래 메뉴에서 지금 화면 표시. 더보기 안의 화면이면 '더보기'에 불 */
-  function syncNav(id, scroll) {
-    const group = MORE_TABS.includes(id) ? 'more' : id;
-    $$('.bnav .tab').forEach(b => {
-      const on = b.dataset.tab === group;
+  /** 아래 메뉴에서 지금 화면 표시. 더보기 안의 화면이면 '더보기', 운세 프로그램이면 '운세'에 불 */
+  function syncNav() {
+    const app = document.body.dataset.app || 'lotto';
+    let group = null;
+    if (app === 'fortune') group = 'fortune';
+    else if (app === 'lotto') {
+      const p = $('#app-lotto .panel.active');
+      const id = p ? p.id.replace(/^tab-/, '') : 'recommend';
+      group = MORE_TABS.includes(id) ? 'more' : id;
+    }
+    $$('.bnav .bn').forEach(b => {
+      const on = b.dataset.go === group;
       b.classList.toggle('is-on', on);
       if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
-    if (scroll) window.scrollTo({ top: 0 });
   }
 
-  const cur = document.querySelector('#app-lotto .tab.active');
-  syncNav(cur ? cur.dataset.tab : 'recommend', false);
+  new MutationObserver(syncNav).observe(document.body, { attributes: true, attributeFilter: ['data-app'] });
+  new MutationObserver(syncNav).observe($('#app-lotto'), { attributes: true, subtree: true, attributeFilter: ['class'] });
+  syncNav();
 
 
   // 메뉴 창: 지금 보고 있는 프로그램 표시

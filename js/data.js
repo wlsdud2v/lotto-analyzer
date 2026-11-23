@@ -5,8 +5,8 @@
  */
 const LottoData = (() => {
 
-  /** 1등 당첨금 정보 (없으면 null) */
-  const money = (prize, winners, sales) => (winners == null && prize == null ? {} : { prize: +prize || 0, winners: +winners || 0, sales: +sales || 0 });
+  /** 1등 당첨금 정보. 판매액이 없으면 '정보 없음'으로 보고 비워 둠 (0명·0원으로 저장된 예전 데이터 포함) */
+  const money = (prize, winners, sales) => (winners == null || !(+sales > 0) ? {} : { prize: +prize || 0, winners: +winners || 0, sales: +sales });
 
 
   function fromRows(rows) {
