@@ -40,6 +40,8 @@
   const ball = (n, cls = '') => `<span class="ball d${dec(n)} ${cls}">${n}</span>`;
   const pct = (v, d = 1) => (v * 100).toFixed(d) + '%';
   const fmt = n => n.toLocaleString('ko-KR');
+  const ic = name => `<svg class="ic" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+  const STRAT_ICON = { balanced: 'scale', hot: 'flame', cold: 'snow', random: 'dice' };
 
   function addDays(dateStr, days) {
     const [y, m, dd] = dateStr.split('-').map(Number);
@@ -114,11 +116,10 @@
     const all = state.allDraws;
     const first = all[0], last = all[all.length - 1];
     $('#dataInfo').textContent = `${first.no}회 ~ ${last.no}회 (${fmt(all.length)}회차) · ${state.source}`;
-    const nextDate = addDays(last.date, 7);
     $('#latest').innerHTML = `
-      <div class="lbl"><b>${last.no}회 당첨번호</b>${last.date}</div>
-      <div class="balls">${last.nums.map(n => ball(n, 'sm')).join('')}<span class="plus">+</span>${ball(last.bonus, 'sm')}</div>
-      <div class="lbl"><b>다음 ${last.no + 1}회</b>${nextDate} 추첨</div>`;
+      <div class="lt-head"><h2>${last.no}회 당첨 번호</h2><span>${last.date}</span></div>
+      <div class="balls">${last.nums.map(n => ball(n)).join('')}<span class="plus">+</span>${ball(last.bonus)}</div>
+      <span class="bonus-lbl">+ 보너스</span>`;
   }
 
 
@@ -126,7 +127,11 @@
     const draws = scopeDraws();
     state.stats = E.computeStats(draws, state.recentN);
     const s = state.stats;
-    $('#rangeHint').textContent = `분석 대상 ${draws[0].no}회 ~ ${draws[draws.length - 1].no}회 · 회차당 이론 기대 출현 ${s.expected.toFixed(1)}번`;
+    $('#rangeHint').textContent = `지금 분석: ${draws[0].no}회 ~ ${draws[draws.length - 1].no}회 (${fmt(draws.length)}회차)`;
+    const rs = $('#rangeSel'), rc = $('#recentSel');
+    const label = `${rs.options[rs.selectedIndex].text}`;
+    $$('.range-label').forEach(el => { el.textContent = label; });
+    rc.title = rc.options[rc.selectedIndex].text;
 
     // 합계 필터 기본값 = 분석 범위 내 당첨번호 합계의 하위 10% ~ 상위 10%
     if (!state.sumTouched) {
@@ -160,7 +165,7 @@
     const max = list[0] ? list[0].p : 1;
     const free = 45 - fixed.size - excludedNums().length;
     const base = (6 - fixed.size) / free;
-    const fixedNote = `<p class="hint" style="grid-column:1/-1">${fixed.size ? `포함 번호 ${[...fixed].join(', ')}는 100%로 고정되어 목록에서 뺐습니다. ` : ''}같은 조건에서 완전 무작위로 고를 때의 기준 확률은 번호당 ${pct(base, 1)}입니다.</p>`;
+    const fixedNote = `<p class="hint" style="grid-column:1/-1">추천 생성기가 그 번호를 고를 확률 · 무작위 기준 ${pct(base, 1)}${fixed.size ? ` · 넣을 번호 ${[...fixed].join(', ')} 제외` : ''}</p>`;
     $('#topProb').innerHTML = fixedNote + list.slice(0, 10).map(x => `
       <div class="tp">${ball(x.n, 'sm')}<div class="bar"><i style="width:${(x.p / max) * 100}%"></i></div><span class="v">${pct(x.p)}</span></div>`).join('');
   }
@@ -180,14 +185,14 @@
   function onPrefClick(n) {
     const cur = state.pref.get(n);
     if (!cur) {
-      if (fixedNums().length >= MAX_FIX) { toast(`포함 번호는 최대 ${MAX_FIX}개까지 고를 수 있어요. 한 번 더 누르면 제외로 바뀝니다.`); state.pref.set(n, 'exc'); }
+      if (fixedNums().length >= MAX_FIX) { toast(`넣을 번호는 ${MAX_FIX}개까지예요. ${n}번은 빼기로 바꿨어요.`); state.pref.set(n, 'exc'); }
       else state.pref.set(n, 'fix');
     } else if (cur === 'fix') state.pref.set(n, 'exc');
     else state.pref.delete(n);
 
     if (45 - excludedNums().length - fixedNums().length < 6 - fixedNums().length) {
       state.pref.delete(n);
-      toast('제외 번호가 너무 많아 6개를 채울 수 없습니다.');
+      toast('뺄 번호가 너무 많아 6개를 채울 수 없어요.');
     }
     renderPref();
     scheduleProb();
@@ -201,9 +206,12 @@
     });
     const f = fixedNums(), x = excludedNums();
     $('#prefSummary').innerHTML = (!f.length && !x.length)
-      ? '선택 없음 — 선호 번호 없이 추천합니다.'
-      : `${f.length ? `<b class="tag fix">포함</b> ${f.join(', ')}` : ''} ${x.length ? `&nbsp;<b class="tag exc">제외</b> ${x.join(', ')}` : ''}
-         &nbsp;<button class="btn ghost sm" id="prefClear">초기화</button>`;
+      ? ''
+      : `${f.length ? `<span class="ptag"><i class="pick-dot fix"></i>${f.join(', ')}</span>` : ''}
+         ${x.length ? `<span class="ptag"><i class="pick-dot exc"></i>${x.join(', ')}</span>` : ''}
+         <button class="btn ghost sm" id="prefClear">${ic('refresh')}지우기</button>`;
+    const badge = [f.length ? `넣기 ${f.length}` : '', x.length ? `빼기 ${x.length}` : ''].filter(Boolean).join(' · ');
+    $('#prefBadge').textContent = badge;
     const clr = $('#prefClear');
     if (clr) clr.onclick = () => { state.pref.clear(); renderPref(); scheduleProb(); };
   }
@@ -211,7 +219,9 @@
 
   function renderStrategies() {
     $('#strategies').innerHTML = Object.entries(E.STRATEGIES).map(([k, v]) =>
-      `<button class="strat ${k === state.strategy ? 'active' : ''}" data-k="${k}"><b>${v.label}</b><span>${v.desc}</span></button>`).join('');
+      `<button class="strat ${k === state.strategy ? 'active' : ''}" data-k="${k}" aria-pressed="${k === state.strategy}">${ic(STRAT_ICON[k] || 'spark')}${v.label}</button>`).join('');
+    $('#info-strategy').innerHTML = '<dl class="strat-info">' + Object.entries(E.STRATEGIES).map(([k, v]) =>
+      `<dt>${ic(STRAT_ICON[k] || 'spark')}${v.label}</dt><dd>${v.desc}</dd>`).join('') + '</dl>';
   }
 
 
@@ -239,7 +249,7 @@
 
     state.results = sets.map(r => ({ nums: r.set, relaxed: r.relaxed, fixed: opts.fixed, strategy: opts.strategy }));
     const label = E.STRATEGIES[opts.strategy].label;
-    $('#genInfo').textContent = `${label}${opts.fixed.length ? ` · 포함 ${opts.fixed.join(',')}` : ''}${weekly ? ` · ${nextNo}회 고정` : ''}`;
+    $('#genInfo').textContent = `${nextNo}회 · ${label}`;
     renderResults();
   }
 
@@ -250,7 +260,7 @@
     const r = bt.ranks;
     const parts = [];
     for (let k = 1; k <= 5; k++) if (r[k]) parts.push(`${k}등 ${r[k]}회`);
-    const hist = parts.length ? `<span class="hit">과거 대입: ${parts.join(' · ')}</span>` : '과거 대입: 3개 이상 일치 없음';
+    const hist = parts.length ? `<span class="hit">과거 대입 ${parts.join(' · ')}</span>` : '<span>과거 대입 당첨 없음</span>';
     return `<span>합계 <b>${d.sum}</b></span><span>홀:짝 <b>${d.odd}:${d.even}</b></span><span>저:고 <b>${d.low}:${d.high}</b></span><span>${hist}</span>`;
   }
 
@@ -259,30 +269,32 @@
     const fixed = new Set(item.fixed || []);
     return `
       <div class="set">
-        <span class="idx">${String.fromCharCode(65 + i)}</span>
-        <div class="balls">${item.nums.map(n => ball(n, fixed.has(n) ? 'fixed' : '')).join('')}</div>
-        <div class="acts">${actions}</div>
-        <div class="meta">${setMeta(item.nums)}${item.relaxed ? '<span class="warn">필터 조건을 모두 만족하는 조합을 찾지 못해 일부 필터를 완화했습니다</span>' : ''}${item.bonus ? `<span>보너스 <b>${item.bonus}</b></span><span>나온 순서 ${item.order.join(' → ')}</span>` : ''}${item.at ? `<span>${item.at} 저장</span>` : ''}</div>
+        <div class="set-main">
+          <span class="idx">${String.fromCharCode(65 + i)}</span>
+          <div class="balls">${item.nums.map(n => ball(n, fixed.has(n) ? 'fixed' : '')).join('')}</div>
+        </div>
+        <div class="acts">${actions}<button class="act icon-only" data-act="meta" aria-label="자세히" aria-expanded="false">${ic('dots')}</button></div>
+        <div class="meta">${setMeta(item.nums)}${item.relaxed ? '<span class="warn">조건을 모두 만족하는 조합이 없어 일부 조건을 완화했어요</span>' : ''}${item.bonus ? `<span>보너스 <b>${item.bonus}</b></span><span>나온 순서 ${item.order.join(' → ')}</span>` : ''}${item.at ? `<span>${item.at} 저장</span>` : ''}</div>
       </div>`;
   }
 
 
   function setActions(i) {
-    const share = window.AndroidBridge ? `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : '';
-    return `<button class="btn ghost sm" data-act="copy" data-i="${i}">복사</button>${share}<button class="btn ghost sm" data-act="save" data-i="${i}">저장</button>`;
+    const share = window.AndroidBridge ? `<button class="act" data-act="share" data-i="${i}">${ic('share')}공유</button>` : '';
+    return `<button class="act" data-act="copy" data-i="${i}">${ic('copy')}복사</button>${share}<button class="act" data-act="save" data-i="${i}">${ic('star')}저장</button>`;
   }
 
 
   function renderResults() {
     const el = $('#results');
-    if (!state.results.length) { el.innerHTML = '<p class="empty">설정을 고른 뒤 <b>추천 번호 생성</b>을 누르세요.</p>'; return; }
+    if (!state.results.length) { el.innerHTML = `<p class="empty">${ic('spark')}위의 <b>번호 받기</b>를 누르세요</p>`; return; }
     el.innerHTML = state.results.map((r, i) => setRow(r, i, setActions(i))).join('');
   }
 
 
   // ───────────────────────── 프로그램 전환 ─────────────────────────
 
-  const APP_TITLES = { lotto: '로또 번호 분석기', speetto: '스피또 시뮬레이터', fortune: '사주 운세' };
+  const APP_TITLES = { lotto: '로또 번호 분석기', speetto: '스피또', fortune: '운세' };
   const APP_IDS = Object.keys(APP_TITLES);
   const appFromHash = () => { const h = location.hash.replace('#', ''); return APP_IDS.includes(h) && h !== 'lotto' ? h : null; };
 
@@ -295,6 +307,7 @@
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     $$('.app').forEach(a => a.classList.toggle('active', a.id === 'app-' + id));
+    document.body.dataset.app = id;
     $$('[data-for]').forEach(el => { el.hidden = el.dataset.for !== id; });
     $('#appTitle').textContent = APP_TITLES[id];
     document.title = APP_TITLES[id];
@@ -543,9 +556,9 @@
     const el = $('#jpCount');
     if (!el || !state.allDraws.length) return;
     const ms = nextDrawTime() - Date.now();
-    if (ms <= 0) { el.textContent = '판매 마감 · 추첨 결과를 기다리는 중'; return; }
+    if (ms <= 0) { el.textContent = '판매 마감'; return; }
     const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, mi = Math.floor(ms / 6e4) % 60;
-    el.textContent = `판매 마감까지 ${d ? d + '일 ' : ''}${h}시간 ${mi}분`;
+    el.textContent = `마감 ${d ? d + '일 ' + h + '시간' : h ? h + '시간 ' + mi + '분' : mi + '분'} 전`;
   }
 
 
@@ -556,7 +569,8 @@
     box.hidden = false;
     const last = state.allDraws[state.allDraws.length - 1];
     const o = state.official && state.official.round === e.round ? state.official : null;
-    $('#jpRound').textContent = `${e.round}회 (${addDays(last.date, 7)})`;
+    const nd = addDays(last.date, 7).split('-');
+    $('#jpRound').textContent = `${e.round}회 · ${+nd[1]}월 ${+nd[2]}일 추첨`;
     $('#jpScen').innerHTML = e.scenarios.map(x => `<div class="${x.winners === e.roundedWinners ? 'on' : ''}">1등 ${x.winners}명이면<b>${J().eok(x.each)}원</b></div>`).join('');
     const finalNote = `마감 예상 = 직전 4회 평균 판매액 ${J().eok(e.sales, 0)}원 × 1등 배분율 ${(e.ratio * 100).toFixed(1)}%${e.carry ? ' + 이월금' : ''}. 최근 1년 1등 당첨자는 회차당 ${e.minW}~${e.maxW}명이었습니다.`;
 
@@ -572,7 +586,7 @@
       $('#jpNote').textContent = finalNote;
     } else {
       // 발표값을 못 받으면 자체 추정
-      $('#jpTitle').textContent = '예상 1등 당첨금 (자체 추정)';
+      $('#jpTitle').textContent = '1등 예상 당첨금';
       $('#jpPre').textContent = '1인당 약';
       $('#jpAmount').textContent = J().eok(e.perPerson);
       $('#jpSub').innerHTML = `판매 마감 시 1등 총 당첨금 약 <b>${J().eok(e.pool, 0)}원</b> ÷ 최근 1년 평균 당첨자 <b>${e.roundedWinners}명</b> 기준 · 세전`
@@ -762,7 +776,8 @@
     const lastDraw = state.allDraws[state.allDraws.length - 1];
     const nextDate = addDays(lastDraw.date, 7);
     $('#tcTitle').textContent = `이번 주 로또 선생 — ${next}회`;
-    $('#tcInfo').textContent = `${nextDate} 추첨 · ${data.source}`;
+    $('#tcInfo').textContent = `${nextDate} 추첨`;
+    $('#tcInfo').title = data.source;
 
     const all = LottoTeachers.TEACHERS.map(t => ({ t, st: teacherStats(t.id, 0) }));
     const bestRate = Math.max(...all.map(x => x.st.rate));
@@ -774,7 +789,6 @@
       const prev = data.picks[lastDraw.no] && data.picks[lastDraw.no][t.id];
       const pg = prev ? LottoTeachers.grade(prev, lastDraw) : null;
       const stars = '★'.repeat(f.stars) + '☆'.repeat(5 - f.stars);
-      const share = window.AndroidBridge ? `<button class="btn ghost sm" data-act="share" data-i="${i}">공유</button>` : '';
       return `<div class="tc-card ${st.rate === bestRate ? 'best' : ''}" style="--tc:${t.color}">
         <div class="tc-top">
           <img class="tc-ava" src="${t.photo}" alt="${t.name}" width="64" height="64">
@@ -788,7 +802,7 @@
           <span>평균 <b>${st.avg.toFixed(2)}개</b></span>
           ${pg ? `<span>지난주 <b>${pg.m}개</b>${pg.rank ? ` (${RANK_NAME[pg.rank]})` : ''}</span>` : ''}
         </div>
-        <div class="tc-acts"><button class="btn ghost sm" data-act="copy" data-i="${i}">복사</button>${share}<button class="btn ghost sm" data-act="save" data-i="${i}">저장</button></div>
+        <div class="tc-acts acts">${setActions(i)}</div>
       </div>`;
     }).join('');
     renderTcRank();
@@ -880,10 +894,10 @@
         mc.history.unshift({ nums: main, bonus: drawn[6], order: drawn.slice(0, 6), fixed: [] });
         mc.history.length = Math.min(mc.history.length, 20);
         renderMachineHistory();
-        setMachineStatus(`추첨 완료 — ${main.join(', ')} + 보너스 ${drawn[6]}`, false);
+        setMachineStatus('추첨 완료', false);
         $('#drawBtn').disabled = false;
         $('#drawBtn').textContent = '다시 추첨';
-        $('#trayHint').textContent = '나온 순서대로 놓였습니다. 아래 기록에서 정렬된 번호를 저장할 수 있어요';
+        $('#trayHint').textContent = '아래 기록에서 저장할 수 있어요';
       },
     });
     renderTray();
@@ -1418,8 +1432,8 @@
     const list = loadSaved();
     $('#clearSaved').style.display = list.length ? '' : 'none';
     $('#saved').innerHTML = list.length
-      ? list.map((r, i) => setRow(r, i, `<button class="btn ghost sm" data-act="copy-saved" data-i="${i}">복사</button><button class="btn ghost sm" data-act="del" data-i="${i}">삭제</button>`)).join('')
-      : '<p class="empty">마음에 드는 추천 조합을 저장해 두면 이 브라우저에 남아 있습니다.</p>';
+      ? list.map((r, i) => setRow(r, i, `<button class="act" data-act="check-saved" data-i="${i}">${ic('search')}맞춰보기</button><button class="act" data-act="copy-saved" data-i="${i}">${ic('copy')}복사</button><button class="act icon-only" data-act="del" data-i="${i}" aria-label="삭제">${ic('trash')}</button>`)).join('')
+      : `<p class="empty">${ic('star')}추천 번호의 <b>저장</b>을 누르면 여기에 모입니다</p>`;
   }
 
 
@@ -1447,19 +1461,18 @@
     const hotRecent = [...arr].sort((a, b) => b.recent - a.recent).slice(0, 3);
 
     $('#kpis').innerHTML = `
-      <div class="kpi"><div class="k">분석 회차</div><div class="v">${fmt(s.total)}회</div><div class="s">${draws[0].date} ~ ${draws[draws.length - 1].date}</div></div>
-      <div class="kpi"><div class="k">최다 출현</div><div class="v">${top.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${top.map(x => `${x.n}번 ${x.count}회`).join(' · ')}</div></div>
-      <div class="kpi"><div class="k">최근 ${s.recentN}회 강세</div><div class="v">${hotRecent.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${hotRecent.map(x => `${x.n}번 ${x.recent}회`).join(' · ')}</div></div>
-      <div class="kpi"><div class="k">최장 미출현</div><div class="v">${cold.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${cold.map(x => `${x.n}번 ${x.gap}회째`).join(' · ')}</div></div>`;
+      <div class="kpi"><div class="k">${ic('trophy')}많이 나옴</div><div class="v">${top.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${top.map(x => `${x.count}회`).join(' · ')}</div></div>
+      <div class="kpi"><div class="k">${ic('flame')}요즘 강세</div><div class="v">${hotRecent.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">최근 ${s.recentN}회 중 ${hotRecent.map(x => `${x.recent}회`).join(' · ')}</div></div>
+      <div class="kpi"><div class="k">${ic('snow')}오래 쉼</div><div class="v">${cold.map(x => ball(x.n, 'sm')).join('')}</div><div class="s">${cold.map(x => `${x.gap}회째`).join(' · ')}</div></div>`;
 
     // 히트맵
     const ratios = arr.map(x => x.ratio);
     const lo = Math.min(...ratios), hi = Math.max(...ratios);
     $('#heat').innerHTML = arr.map(x => {
       const t = hi === lo ? 0.5 : (x.ratio - lo) / (hi - lo);
-      const mix = Math.round(8 + t * 72);
+      const mix = Math.round(5 + t * 75);
       const ink = mix > 50 ? '#fff' : 'var(--text)';
-      return `<div class="hcell" style="background:color-mix(in srgb, var(--accent) ${mix}%, var(--surface));color:${ink}" title="${x.n}번: ${x.count}회 (이론 대비 ${pct(x.ratio, 0)})">
+      return `<div class="hcell" style="background:color-mix(in srgb, var(--accent-btn) ${mix}%, var(--surface));color:${ink}" title="${x.n}번: ${x.count}회 (이론 대비 ${pct(x.ratio, 0)})">
         <div class="n">${x.n}</div><div class="r">${pct(x.rate)}</div></div>`;
     }).join('');
 
@@ -1543,7 +1556,7 @@
     const i = state.checkSel.indexOf(n);
     if (i >= 0) state.checkSel.splice(i, 1);
     else if (state.checkSel.length < 6) state.checkSel.push(n);
-    else { toast('6개까지 고를 수 있습니다.'); return; }
+    else { toast('6개까지 고를 수 있어요'); return; }
     renderCheck();
   }
 
@@ -1551,7 +1564,7 @@
   function renderCheck() {
     const sel = [...state.checkSel].sort((a, b) => a - b);
     $$('#checkPicker .pick').forEach(b => b.classList.toggle('on', sel.includes(+b.dataset.n)));
-    $('#checkSel').innerHTML = sel.length ? sel.map(n => ball(n)).join('') : '<span class="hint" style="margin:0">선택한 번호가 여기에 표시됩니다</span>';
+    $('#checkSel').innerHTML = [0, 1, 2, 3, 4, 5].map(i => (sel[i] != null ? ball(sel[i]) : `<span class="slot-e">${i + 1}</span>`)).join('');
 
     const out = $('#checkResult');
     if (sel.length < 6 || !state.allDraws.length) { out.innerHTML = ''; return; }
@@ -1561,13 +1574,15 @@
     const labels = ['', '1등', '2등', '3등', '4등', '5등'];
     const sub = ['', '6개 일치', '5개+보너스', '5개 일치', '4개 일치', '3개 일치'];
     const total = bt.wins.length;
+    const short = ['', '6개', '5+보너스', '5개', '4개', '3개'];
     out.innerHTML = `
-      <p class="hint" style="margin-top:16px">합계 ${d.sum} · 홀:짝 ${d.odd}:${d.even} · 저:고 ${d.low}:${d.high} — 전체 ${fmt(state.allDraws.length)}회 중 ${total}회 당첨권(5등 이상)</p>
-      <div class="ranks">${[1, 2, 3, 4, 5].map(k => `<div class="rank ${bt.ranks[k] ? 'has' : ''}"><div class="k">${labels[k]} · ${sub[k]}</div><div class="v">${bt.ranks[k]}</div></div>`).join('')}</div>
-      ${total ? `<div class="table-wrap"><table class="wins"><thead><tr><th>회차</th><th>날짜</th><th>등수</th><th>당첨번호</th></tr></thead><tbody>
+      <p class="check-sum">${fmt(state.allDraws.length)}회 중 <b>${total}회</b> 당첨</p>
+      <div class="ranks">${[1, 2, 3, 4, 5].map(k => `<div class="rank ${bt.ranks[k] ? 'has' : ''}" title="${sub[k]}"><div class="k">${labels[k]}<small>${short[k]}</small></div><div class="v">${bt.ranks[k]}</div></div>`).join('')}</div>
+      <p class="hint">합계 ${d.sum} · 홀:짝 ${d.odd}:${d.even} · 저:고 ${d.low}:${d.high}</p>
+      ${total ? `<details class="fold sub-fold"><summary>${ic('clock')}당첨된 회차 ${total}건<svg class="ic chev" aria-hidden="true"><use href="#i-down"/></svg></summary><div class="table-wrap"><table class="wins"><thead><tr><th>회차</th><th>날짜</th><th>등수</th><th>당첨번호</th></tr></thead><tbody>
         ${bt.wins.slice(0, 60).map(w => `<tr><td>${w.no}회</td><td>${w.date}</td><td><b>${labels[w.rank]}</b></td>
           <td><div class="balls">${w.nums.map(n => ball(n, 'sm ' + (sel.includes(n) ? 'match' : 'dim'))).join('')}<span class="plus">+</span>${ball(w.bonus, 'sm ' + (sel.includes(w.bonus) ? 'match' : 'dim'))}</div></td></tr>`).join('')}
-      </tbody></table></div>${total > 60 ? `<p class="hint">상위 60건만 표시했습니다.</p>` : ''}` : ''}`;
+      </tbody></table></div>${total > 60 ? `<p class="hint">최근 60건만 표시</p>` : ''}</details>` : ''}`;
   }
 
 
@@ -1587,7 +1602,8 @@
     }));
     $$('.app').forEach(app => {
       try {
-        const saved = localStorage.getItem('lotto.tab.' + app.id) || (app.id === 'app-lotto' ? localStorage.getItem('lotto.tab') : null);
+        if (app.id === 'app-lotto') return;      // 로또는 항상 첫 단계(추천)부터
+        const saved = localStorage.getItem('lotto.tab.' + app.id);
         const t = saved && app.querySelector(`.tab[data-tab="${saved}"]`);
         if (t) t.click();
       } catch (e) { /* 무시 */ }
@@ -1635,7 +1651,7 @@
         list.unshift({ nums: r.nums, fixed: r.fixed, at: new Date().toLocaleDateString('ko-KR') });
         storeSaved(list.slice(0, 50));
         renderSaved();
-        toast('저장했습니다. \'번호 추천\' 탭의 저장한 번호에서 볼 수 있어요.');
+        toast('저장했어요 · 아래 ‘내 번호’에서 볼 수 있어요');
       }
     };
     $('#results').addEventListener('click', onSetAction(() => state.results, () => '추천 번호'));
@@ -1684,9 +1700,17 @@
       const list = loadSaved();
       const i = +b.dataset.i;
       if (b.dataset.act === 'copy-saved') copyNums(list[i].nums);
-      if (b.dataset.act === 'del') { list.splice(i, 1); storeSaved(list); renderSaved(); }
+      if (b.dataset.act === 'check-saved') {
+        state.checkSel = [...list[i].nums];
+        renderCheck();
+        $('#checkCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (b.dataset.act === 'del') { list.splice(i, 1); storeSaved(list); renderSaved(); toast('지웠어요'); }
     });
-    $('#clearSaved').addEventListener('click', () => { storeSaved([]); renderSaved(); });
+    $('#clearSaved').addEventListener('click', () => {
+      if (!confirm('저장한 번호를 모두 지울까요?')) return;
+      storeSaved([]); renderSaved();
+    });
 
     $('#statsTable').addEventListener('click', e => {
       const th = e.target.closest('th[data-k]');
@@ -1717,8 +1741,9 @@
   async function runUpdate(force) {
     if (!state.allDraws.length || typeof LottoUpdater === 'undefined') return;
     const btn = $('#updateBtn');
+    const lbl = btn.querySelector('span') || btn;
     btn.disabled = true;
-    btn.textContent = '확인 중…';
+    lbl.textContent = '확인 중…';
     try {
       const res = await LottoUpdater.check(state.allDraws, { force });
       if (res.status === 'updated') {
@@ -1736,7 +1761,7 @@
       console.warn('update failed', err);
     } finally {
       btn.disabled = false;
-      btn.textContent = '최신 회차 확인';
+      lbl.textContent = '최신 회차 확인';
     }
   }
 

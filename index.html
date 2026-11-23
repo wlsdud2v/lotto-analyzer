@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>로또 번호 분석기</title>
   <meta name="description" content="역대 로또 당첨 번호로 보는 번호별 확률과 선호 번호를 포함한 추천 번호. 매주 최신 회차 자동 반영.">
   <meta property="og:type" content="website">
@@ -11,334 +11,397 @@
   <meta property="og:image" content="https://wlsdud2v.github.io/lotto-analyzer/og.png">
   <meta property="og:url" content="https://wlsdud2v.github.io/lotto-analyzer/">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#c8341f">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141311" media="(prefers-color-scheme: dark)">
   <!-- Google AdSense 게시자 ID (js/ads.js 가 여기서 읽음) -->
   <meta name="google-adsense-account" content="ca-pub-3365090926696962">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23f6c12a'/%3E%3Ccircle cx='12' cy='11' r='4' fill='%23fff' fill-opacity='.6'/%3E%3C/svg%3E">
+  <!-- 화면 밝기(라이트/다크) — 깜빡임 없이 먼저 적용 -->
+  <script>try { var t = localStorage.getItem('lotto.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body data-app="lotto">
+  <!-- ───────────── 아이콘 ───────────── -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l2.1 6 5.9 2.9-5.9 2.9L12 21l-2.1-6.2L4 11.9 9.9 9z"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></symbol>
+      <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a2.5 2.5 0 0 0 0 5V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a2.5 2.5 0 0 0 0-5z"/><path d="M9 12l2 2 4-4"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r=".6" fill="currentColor"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 4v3h3M4 13a8 8 0 0 0 14.6 4.5M20 20v-3h-3"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+      <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 4v16M8 20h8M5 7h14M5 7l-3 6.5a3 3 0 0 0 6 0zM19 7l-3 6.5a3 3 0 0 0 6 0z"/></symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c.5 3.5 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.5 1.3-3.8 2.3-5.5.6 1.2 1.2 2 2.2 2.6.6-2.4.9-4.6.5-7.6z"/></symbol>
+      <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9.5 4L12 6.2 14.5 4M9.5 20l2.5-2.2 2.5 2.2"/></symbol>
+      <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor"/></symbol>
+      <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+      <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="6" width="10" height="15" rx="2" transform="rotate(-10 8 13.5)"/><rect x="11" y="4" width="10" height="15" rx="2" transform="rotate(8 16 11.5)"/></symbol>
+      <symbol id="i-drum" viewBox="0 0 24 24"><circle cx="12" cy="11" r="8"/><circle cx="9" cy="13" r="1.6"/><circle cx="14" cy="9" r="1.6"/><circle cx="14.5" cy="14" r="1.6"/><path d="M8 21h8M12 19v2"/></symbol>
+      <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v3M8 21h8M9 17h6v4H9z"/></symbol>
+      <symbol id="i-scratch" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 14l2-3 2 3 2-3 2 3 2-3"/></symbol>
+      <symbol id="i-yin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a4.5 4.5 0 0 1 0 9 4.5 4.5 0 0 0 0 9"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="12" cy="16.5" r="1"/></symbol>
+      <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="9" r="2.5"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- ───────────── 머리글 (간단하게) ───────────── -->
   <header class="top">
     <div class="wrap top-inner">
-      <div class="brand">
-        <h1 class="sr-only" id="appTitle">로또 번호 분석기</h1>
-        <div class="app-switch" role="tablist" aria-label="프로그램 선택">
-          <button class="app-btn active" data-app="lotto" role="tab" aria-selected="true"><span class="full">로또 번호 분석기</span><span class="short">로또</span></button>
-          <button class="app-btn" data-app="speetto" role="tab" aria-selected="false"><span class="full">스피또 시뮬레이터</span><span class="short">스피또</span></button>
-          <button class="app-btn" data-app="fortune" role="tab" aria-selected="false"><span class="full">운세</span><span class="short">운세</span></button>
-        </div>
-        <p class="sub" id="dataInfo" data-for="lotto">데이터를 불러오는 중…</p>
-        <p class="sub" data-for="speetto" hidden>동행복권 스피또1000·2000·500 발행 현황과 긁는 복권 시뮬레이터</p>
-        <p class="sub" data-for="fortune" hidden>생년월일시로 보는 사주팔자와 오늘의 운세 — 재미로 보는 전통 명리</p>
-      </div>
-      <div class="latest" id="latest" data-for="lotto"></div>
-      <div class="top-actions" data-for="lotto">
-        <button class="btn ghost" id="updateBtn" title="인터넷에서 최신 당첨 번호 확인">최신 회차 확인</button>
-        <label class="btn ghost file-btn" title="동행복권 결과 JSON 또는 CSV">
-          데이터 불러오기
-          <input type="file" id="fileInput" accept=".json,.csv" hidden>
-        </label>
-      </div>
+      <button class="icon-btn app-btn back-btn" data-app="lotto" aria-label="로또 화면으로 돌아가기"><svg class="ic"><use href="#i-back"/></svg></button>
+      <h1 class="app-title"><svg class="ic logo" aria-hidden="true"><use href="#i-ball"/></svg><span id="appTitle">로또 번호 분석기</span></h1>
+      <button class="icon-btn" id="themeBtn" aria-label="밝은 화면 / 어두운 화면 바꾸기"><svg class="ic ic-sun"><use href="#i-sun"/></svg><svg class="ic ic-moon"><use href="#i-moon"/></svg></button>
+      <button class="icon-btn" id="menuBtn" aria-label="메뉴 열기" aria-haspopup="dialog"><svg class="ic"><use href="#i-menu"/></svg></button>
     </div>
   </header>
 
   <main class="wrap">
   <div class="app active" id="app-lotto">
-    <!-- ───────────── 이번 회차 예상 1등 당첨금 ───────────── -->
-    <section class="jackpot" id="jackpot" hidden>
-      <div class="jp-main">
-        <div class="jp-label"><b id="jpRound"></b> <span id="jpTitle">1등 예상 총 당첨금</span></div>
-        <div class="jp-amount"><span class="jp-pre" id="jpPre"></span><span id="jpAmount"></span><span class="jp-won">원</span></div>
-        <div class="jp-sub" id="jpSub"></div>
-      </div>
-      <div class="jp-side">
-        <div class="jp-count" id="jpCount"></div>
-        <div class="jp-scen-title" id="jpScenTitle"></div>
-        <div class="jp-scen" id="jpScen"></div>
-        <div class="jp-note" id="jpNote"></div>
-      </div>
-    </section>
 
-    <section class="range-bar card">
-      <label>분석 범위
-        <select id="rangeSel">
-          <option value="0">전체 회차</option>
-          <option value="500">최근 500회</option>
-          <option value="300">최근 300회</option>
-          <option value="100">최근 100회</option>
-          <option value="50">최근 50회</option>
-        </select>
-      </label>
-      <label>최근 흐름 기준
-        <select id="recentSel">
-          <option value="10">최근 10회</option>
-          <option value="20" selected>최근 20회</option>
-          <option value="50">최근 50회</option>
-          <option value="100">최근 100회</option>
-        </select>
-      </label>
-      <span class="hint" id="rangeHint"></span>
-    </section>
-
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="recommend" role="tab">번호 추천</button>
-      <button class="tab" data-tab="teachers" role="tab">로또 선생<span class="ribbon new">NEW</span></button>
-      <button class="tab" data-tab="tarot" role="tab">타로 추천<span class="ribbon hot">HOT</span></button>
-      <button class="tab" data-tab="machine" role="tab">추첨기<span class="ribbon new">NEW</span></button>
-      <button class="tab" data-tab="stats" role="tab">번호별 확률</button>
-      <button class="tab" data-tab="prize" role="tab">1등 당첨금</button>
-      <button class="tab" data-tab="check" role="tab">내 번호 확인</button>
-    </nav>
-
-    <!-- ───────────── 번호 추천 ───────────── -->
+    <!-- ═════════════ ① 번호 추천 (첫 화면) ═════════════ -->
     <section class="panel active" id="tab-recommend">
-      <div class="rec-layout">
-        <div class="card settings">
-          <h2>선호 번호</h2>
-          <p class="hint">번호를 누를 때마다 <b class="tag fix">포함</b> → <b class="tag exc">제외</b> → 해제 순으로 바뀝니다. 포함은 최대 5개.</p>
-          <div class="picker" id="prefPicker"></div>
-          <div class="pref-summary" id="prefSummary"></div>
-          <label class="check"><input type="checkbox" id="companion" checked> 선호 번호와 <b>함께 자주 나온 번호</b>에 가중치</label>
 
-          <h2>추천 방식</h2>
-          <div class="strategies" id="strategies"></div>
+      <!-- 이번 회차: 회차 · 마감까지 남은 시간 · 예상 1등 당첨금 -->
+      <section class="card jackpot" id="jackpot" hidden>
+        <div class="jp-top">
+          <span class="jp-round" id="jpRound"></span>
+          <span class="jp-count"><svg class="ic"><use href="#i-clock"/></svg><span id="jpCount"></span></span>
+        </div>
+        <div class="jp-label"><span id="jpTitle">1등 예상 당첨금</span>
+          <button class="info-btn" data-info="info-jackpot" data-title="1등 예상 당첨금" aria-label="당첨금 설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
+        <div class="jp-amount"><span class="jp-pre" id="jpPre"></span><span id="jpAmount"></span><span class="jp-won">원</span></div>
+        <div class="info-src" id="info-jackpot" hidden>
+          <p id="jpSub"></p>
+          <p class="sheet-sub" id="jpScenTitle"></p>
+          <div class="jp-scen" id="jpScen"></div>
+          <p class="sheet-note" id="jpNote"></p>
+        </div>
+      </section>
 
-          <h2>조합 필터</h2>
+      <!-- 1단계: 추천 방식 -->
+      <section class="card step">
+        <h2 class="step-h"><span class="step-n">1</span>추천 방식
+          <button class="info-btn" data-info="info-strategy" data-title="추천 방식" aria-label="추천 방식 설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </h2>
+        <div class="strategies" id="strategies"></div>
+        <div class="info-src" id="info-strategy" hidden></div>
+      </section>
+
+      <!-- 2단계: 꼭 넣을 / 뺄 번호 (선택) -->
+      <details class="card step fold" id="prefFold">
+        <summary class="step-h"><span class="step-n">2</span>넣을 · 뺄 번호<span class="opt">선택</span><span class="pref-badge" id="prefBadge"></span><svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="legend">
+          <span><i class="pick-dot fix"></i>1번 누르면 <b>넣기</b></span>
+          <span><i class="pick-dot exc"></i>2번 누르면 <b>빼기</b></span>
+          <button class="info-btn" data-info="info-pref" data-title="넣을 · 뺄 번호" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
+        <div class="picker" id="prefPicker"></div>
+        <div class="pref-summary" id="prefSummary"></div>
+        <label class="check"><input type="checkbox" id="companion" checked> 함께 자주 나온 번호 우대
+          <button class="info-btn" type="button" data-info="info-companion" data-title="함께 자주 나온 번호" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </label>
+        <div class="info-src" id="info-pref" hidden>
+          <p>번호를 누를 때마다 <b>넣기 → 빼기 → 해제</b> 순으로 바뀝니다.</p>
+          <p><b>넣기</b>로 고른 번호는 모든 줄에 들어가고(최대 5개), 나머지 번호만 추천합니다. <b>빼기</b>로 고른 번호는 추천에서 빠집니다.</p>
+        </div>
+        <div class="info-src" id="info-companion" hidden>
+          <p>‘넣기’로 고른 번호와 과거 같은 회차에 함께 자주 나온 번호에 가중치를 줍니다. 넣을 번호가 없으면 영향이 없습니다.</p>
+        </div>
+      </details>
+
+      <!-- 3단계: 몇 줄 + 번호 받기 -->
+      <section class="card step">
+        <h2 class="step-h"><span class="step-n">3</span>몇 줄 받을까요?</h2>
+        <div class="stepper" data-for-input="setCount">
+          <button type="button" class="step-btn" data-d="-1" aria-label="한 줄 줄이기"><svg class="ic"><use href="#i-minus"/></svg></button>
+          <label class="step-val"><input type="number" id="setCount" class="num" value="5" min="1" max="10" inputmode="numeric" aria-label="받을 줄 수"><span>줄</span></label>
+          <button type="button" class="step-btn" data-d="1" aria-label="한 줄 늘리기"><svg class="ic"><use href="#i-plus"/></svg></button>
+        </div>
+        <button class="btn primary xl" id="genBtn"><svg class="ic"><use href="#i-spark"/></svg>번호 받기</button>
+
+        <details class="fold sub-fold">
+          <summary><svg class="ic"><use href="#i-sliders"/></svg>세부 조건<svg class="ic chev"><use href="#i-down"/></svg></summary>
           <div class="filters">
+            <label class="check"><input type="checkbox" id="weekly" checked> 이번 주 같은 번호 유지
+              <button class="info-btn" type="button" data-info="info-weekly" data-title="이번 주 같은 번호 유지" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></label>
             <label class="check"><input type="checkbox" id="fSum"> 번호 합계
-              <input type="number" id="fSumMin" class="num" min="21" max="255"> ~ <input type="number" id="fSumMax" class="num" min="21" max="255">
+              <span class="sum-range"><input type="number" id="fSumMin" class="num" min="21" max="255" aria-label="합계 최소"> ~ <input type="number" id="fSumMax" class="num" min="21" max="255" aria-label="합계 최대"></span>
             </label>
-            <label class="check"><input type="checkbox" id="fOddEven"> 홀/짝이 한쪽으로만 몰린 조합 제외</label>
-            <label class="check"><input type="checkbox" id="fHighLow"> 저(1~22)/고(23~45) 한쪽 몰림 제외</label>
-            <label class="check"><input type="checkbox" id="fRun"> 3개 이상 연속 번호 제외</label>
-            <label class="check"><input type="checkbox" id="fSpread"> 번호대(1·10·20·30·40번대) 3구간 이상</label>
-            <p class="hint">역대 1등 당첨 조합과 같은 조합은 항상 제외됩니다.</p>
+            <label class="check"><input type="checkbox" id="fOddEven"> 홀·짝 쏠림 빼기</label>
+            <label class="check"><input type="checkbox" id="fHighLow"> 작은·큰 번호 쏠림 빼기</label>
+            <label class="check"><input type="checkbox" id="fRun"> 3연속 번호 빼기</label>
+            <label class="check"><input type="checkbox" id="fSpread"> 번호대 3구간 이상</label>
+            <button type="button" class="btn ghost range-open" data-sheet="rangeSheet"><svg class="ic"><use href="#i-chart"/></svg>분석 기준 <b class="range-label">전체 회차</b></button>
+            <button class="info-btn wide" type="button" data-info="info-filters" data-title="세부 조건" aria-label="세부 조건 설명"><svg class="ic"><use href="#i-info"/></svg>조건 설명</button>
           </div>
-
-          <div class="gen-row">
-            <label>세트 수 <input type="number" id="setCount" class="num" value="5" min="1" max="10"></label>
-            <label class="check"><input type="checkbox" id="weekly" checked> 이번 주 고정 추천</label>
-          </div>
-          <button class="btn primary big" id="genBtn">추천 번호 생성</button>
+        </details>
+        <div class="info-src" id="info-weekly" hidden><p>켜 두면 설정이 같을 때 다음 추첨 전까지 언제 눌러도 <b>같은 번호</b>가 나옵니다. 끄면 누를 때마다 새 번호가 나옵니다.</p></div>
+        <div class="info-src" id="info-filters" hidden>
+          <p><b>번호 합계</b> — 6개 번호를 더한 값이 이 범위인 조합만 추천합니다. 처음 값은 역대 당첨 번호 합계의 하위 10% ~ 상위 10%입니다.</p>
+          <p><b>홀·짝 쏠림</b> — 6개가 모두 홀수이거나 모두 짝수인 조합을 뺍니다.</p>
+          <p><b>작은·큰 번호 쏠림</b> — 1~22 또는 23~45 한쪽에만 몰린 조합을 뺍니다.</p>
+          <p><b>3연속 번호</b> — 7·8·9처럼 3개 이상 이어진 조합을 뺍니다.</p>
+          <p><b>번호대</b> — 1·10·20·30·40번대 중 3구간 이상에 고르게 퍼진 조합만 추천합니다.</p>
+          <p>역대 1등 당첨 조합과 같은 조합은 항상 뺍니다.</p>
         </div>
+      </section>
 
-        <div class="results">
-          <div class="card">
-            <div class="card-head">
-              <h2>추천 결과</h2>
-              <span class="hint" id="genInfo"></span>
-            </div>
-            <div id="results" class="set-list"><p class="empty">설정을 고른 뒤 <b>추천 번호 생성</b>을 누르세요.</p></div>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <h2>현재 설정의 번호별 추천 확률 Top 10</h2>
-              <span class="hint">추천 생성기가 그 번호를 고를 확률</span>
-            </div>
-            <div id="topProb" class="top-prob"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <h2>저장한 번호</h2>
-              <button class="btn ghost sm" id="clearSaved">전체 삭제</button>
-            </div>
-            <div id="saved" class="set-list"></div>
-          </div>
+      <!-- 결과 -->
+      <section class="card result-card" id="resultCard">
+        <div class="card-head">
+          <h2>추천 번호</h2>
+          <span class="hint" id="genInfo"></span>
         </div>
+        <div id="results" class="set-list"></div>
+      </section>
+
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-chart"/></svg>번호별 추천 확률 Top 10<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div id="topProb" class="top-prob"></div>
+      </details>
+    </section>
+
+    <!-- ═════════════ ② 분석 ═════════════ -->
+    <section class="panel" id="tab-stats">
+      <section class="card latest-card">
+        <div id="latest"></div>
+      </section>
+
+      <button type="button" class="range-chip" data-sheet="rangeSheet"><svg class="ic"><use href="#i-sliders"/></svg><span>분석 기준</span><b class="range-label">전체 회차</b><svg class="ic"><use href="#i-next"/></svg></button>
+
+      <div class="kpis" id="kpis"></div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>번호별 출현 지도</h2>
+          <button class="info-btn" data-info="info-heat" data-title="번호별 출현 지도" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
+        <div class="heat-legend" aria-hidden="true"><span>적게</span><i></i><span>많이</span></div>
+        <div class="heat" id="heat"></div>
+        <div class="info-src" id="info-heat" hidden>
+          <p>칸의 색이 진할수록 완전 무작위일 때의 평균(이론값)보다 <b>많이 나온</b> 번호입니다. 칸 아래 숫자는 출현률(나온 회차 ÷ 전체 회차)입니다.</p>
+        </div>
+      </section>
+
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-chart"/></svg>출현 횟수 그래프<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="chart" id="chart"></div>
+        <p class="hint">점선 = 이론 기대값</p>
+      </details>
+
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-grid"/></svg>번호별 상세 표<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint">제목을 누르면 정렬</span>
+          <button class="info-btn" data-info="info-table" data-title="상세 표 읽는 법" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button></div>
+        <div class="table-wrap">
+          <table class="stats-table" id="statsTable"></table>
+        </div>
+        <div class="info-src" id="info-table" hidden>
+          <p><b>출현률</b> — 과거 회차 중 그 번호가 나온 비율</p>
+          <p><b>이론 대비</b> — 완전 무작위일 때 기대 횟수 대비 비율 (100% = 평균)</p>
+          <p><b>추천 확률</b> — ‘추천’ 화면의 현재 설정으로 생성기가 그 번호를 고를 확률</p>
+          <p>실제 추첨에서 각 번호가 뽑힐 확률은 과거와 무관하게 항상 6/45 = 13.33%이며, 1등 확률은 조합당 1/8,145,060입니다.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ═════════════ ③ 내 번호 ═════════════ -->
+    <section class="panel" id="tab-check">
+      <section class="card">
+        <div class="card-head">
+          <h2><svg class="ic h-ic"><use href="#i-star"/></svg>저장한 번호</h2>
+          <button class="btn ghost sm" id="clearSaved"><svg class="ic"><use href="#i-trash"/></svg>모두 지우기</button>
+        </div>
+        <div id="saved" class="set-list"></div>
+      </section>
+
+      <section class="card" id="checkCard">
+        <div class="card-head">
+          <h2><svg class="ic h-ic"><use href="#i-search"/></svg>과거 당첨 맞춰보기</h2>
+          <button class="info-btn" data-info="info-check" data-title="과거 당첨 맞춰보기" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
+        <div class="check-sel">
+          <div class="balls slots6" id="checkSel"></div>
+          <button class="btn ghost sm" id="checkReset" aria-label="다시 고르기"><svg class="ic"><use href="#i-refresh"/></svg>다시</button>
+        </div>
+        <div class="picker" id="checkPicker"></div>
+        <div id="checkResult"></div>
+        <div class="info-src" id="info-check" hidden><p>번호 6개를 고르면 1회부터 지금까지 모든 회차에 대입해 <b>몇 등에 몇 번</b> 당첨됐을지 보여 줍니다. 저장한 번호의 <b>맞춰보기</b>를 눌러도 됩니다.</p></div>
+      </section>
+    </section>
+
+    <!-- ═════════════ ④ 더보기 ═════════════ -->
+    <section class="panel" id="tab-more">
+      <h2 class="more-h">재미로 보는 번호</h2>
+      <div class="tiles">
+        <button class="tile tab" data-tab="teachers"><svg class="ic"><use href="#i-person"/></svg><b>로또 선생</b><span>네 선생의 이번 주 번호</span></button>
+        <button class="tile tab" data-tab="tarot"><svg class="ic"><use href="#i-cards"/></svg><b>타로 추천</b><span>카드를 뽑아 번호 받기</span></button>
+        <button class="tile tab" data-tab="machine"><svg class="ic"><use href="#i-drum"/></svg><b>추첨기</b><span>실제 추첨기처럼 뽑기</span></button>
+        <button class="tile tab" data-tab="prize"><svg class="ic"><use href="#i-trophy"/></svg><b>1등 당첨금</b><span>역대 당첨금 기록</span></button>
+      </div>
+      <h2 class="more-h">다른 프로그램</h2>
+      <div class="tiles">
+        <button class="tile app-btn" data-app="speetto"><svg class="ic"><use href="#i-scratch"/></svg><b>스피또</b><span>즉석 복권 현황 · 긁기</span></button>
+        <button class="tile app-btn" data-app="fortune"><svg class="ic"><use href="#i-yin"/></svg><b>운세</b><span>사주 · 오늘의 운세</span></button>
       </div>
     </section>
 
     <!-- ───────────── 로또 선생 ───────────── -->
     <section class="panel" id="tab-teachers">
+      <button class="tab sub-back" data-tab="more"><svg class="ic"><use href="#i-back"/></svg>더보기</button>
       <div class="card">
         <div class="card-head">
           <h2 id="tcTitle">이번 주 로또 선생</h2>
-          <span class="hint" id="tcInfo">불러오는 중…</span>
+          <button class="info-btn" data-info="info-tc" data-title="로또 선생" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
         </div>
+        <p class="hint" id="tcInfo">불러오는 중…</p>
         <div class="tc-grid" id="tcGrid"></div>
-        <p class="note">
-          네 선생의 번호와 운세는 회차마다 고정되어 누가 보더라도 같고, 매주 추첨이 끝나면 자동으로 다음 회차 번호가 정해져 저장소에 기록됩니다.
-          각 회차 번호는 그 회차 추첨 <b>전</b>까지의 당첨 데이터만으로 만들었습니다. 재미로 즐겨 주세요 — 누구 말을 믿을지는 여러분의 몫입니다.
-        </p>
+        <div class="info-src" id="info-tc" hidden>
+          <p>네 선생의 번호와 운세는 회차마다 고정되어 누가 보더라도 같고, 매주 추첨이 끝나면 자동으로 다음 회차 번호가 정해집니다.</p>
+          <p>각 회차 번호는 그 회차 추첨 <b>전</b>까지의 당첨 데이터만으로 만들었습니다. 재미로 즐겨 주세요.</p>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <h2>선생별 적중률</h2>
-          <div class="seg" id="tcPeriod"><button data-p="0" class="active">1회부터 전체</button><button data-p="52">최근 52주</button><button data-p="10">최근 10주</button></div>
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-trophy"/></svg>선생별 적중률<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools">
+          <div class="seg" id="tcPeriod"><button data-p="0" class="active">전체</button><button data-p="52">52주</button><button data-p="10">10주</button></div>
+          <button class="info-btn" data-info="info-tcrank" data-title="적중률" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
         </div>
         <div class="table-wrap"><table class="tc-table" id="tcRank"></table></div>
-        <p class="note">적중률 = 5등 이상(번호 3개 이상 일치) 당첨된 주의 비율. 무작위로 고를 때의 이론값은 평균 0.80개 일치, 적중률 약 1.87%입니다.</p>
-      </div>
+        <div class="info-src" id="info-tcrank" hidden><p>적중률 = 5등 이상(번호 3개 이상 일치) 당첨된 주의 비율. 무작위로 고를 때의 이론값은 평균 0.80개 일치, 적중률 약 1.87%입니다.</p></div>
+      </details>
 
-      <div class="card">
-        <div class="card-head">
-          <h2>지난 기록</h2>
-          <span class="hint">숫자는 맞힌 개수 · 색칠된 칸은 당첨 · 굵은 번호가 맞힌 번호</span>
-        </div>
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-clock"/></svg>지난 기록<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint">숫자 = 맞힌 개수 · 색칠 = 당첨</span></div>
         <div class="table-wrap"><table class="tc-table tc-hist" id="tcHist"></table></div>
-        <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="tcMore">더 보기</button></div>
-      </div>
+        <div class="more-row"><button class="btn ghost" id="tcMore">더 보기</button></div>
+      </details>
     </section>
 
     <!-- ───────────── 타로 추천 ───────────── -->
     <section class="panel" id="tab-tarot">
+      <button class="tab sub-back" data-tab="more"><svg class="ic"><use href="#i-back"/></svg>더보기</button>
       <div class="card tarot-table">
         <div class="card-head">
           <h2>타로 카드로 번호 뽑기</h2>
-          <span class="hint" id="tarotGuide">마음속으로 이번 주의 소망을 떠올리며 카드를 고르세요</span>
+          <button class="info-btn" data-info="info-tarot" data-title="타로 추천" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
         </div>
+        <p class="hint" id="tarotGuide">마음속으로 소망을 떠올리며 카드를 고르세요</p>
         <div class="tarot-controls">
           <div class="seg" id="spreadSel" role="group" aria-label="카드 수">
-            <button data-n="1">한 장 · 오늘의 카드</button>
-            <button data-n="3" class="active">세 장 · 과거·현재·미래</button>
+            <button data-n="1">1장</button>
+            <button data-n="3" class="active">3장</button>
           </div>
-          <label>세트 수 <input type="number" id="tarotCount" class="num" value="3" min="1" max="10"></label>
-          <button class="btn ghost" id="shuffleBtn">카드 다시 섞기</button>
+          <label class="mini-num">줄 수 <input type="number" id="tarotCount" class="num" value="3" min="1" max="10"></label>
+          <button class="icon-btn bordered" id="shuffleBtn" aria-label="카드 다시 섞기"><svg class="ic"><use href="#i-refresh"/></svg></button>
         </div>
         <div class="slots" id="tarotSlots"></div>
         <div class="deck" id="tarotDeck"></div>
-      </div>
-
-      <div class="card" id="tarotReadingCard" hidden>
-        <h2>카드 해석</h2>
-        <div id="tarotReading" class="reading"></div>
+        <div class="info-src" id="info-tarot" hidden>
+          <p><b>1장</b>은 오늘의 카드, <b>3장</b>은 과거·현재·미래 카드입니다.</p>
+          <p>정방향 카드의 수는 넣을 번호, 역방향 카드의 수는 뺄 번호가 되고, 카드의 기운에 따라 번호별 가중치가 정해집니다. ‘추천’ 화면의 세부 조건도 함께 적용됩니다. 이번 주에 같은 카드를 뽑으면 같은 번호가 나옵니다.</p>
+          <p>재미로 즐겨 주세요 — 실제 당첨 확률은 어떤 번호든 같습니다.</p>
+        </div>
       </div>
 
       <div class="card" id="tarotNumbersCard" hidden>
         <div class="card-head">
           <h2>카드가 고른 번호</h2>
-          <button class="btn ghost sm" id="tarotReroll">같은 카드로 다른 조합</button>
+          <button class="btn ghost sm" id="tarotReroll"><svg class="ic"><use href="#i-refresh"/></svg>다른 조합</button>
         </div>
         <div id="tarotSummary" class="hint"></div>
         <div id="tarotResults" class="set-list"></div>
-        <p class="note">
-          정방향 카드의 수는 포함 번호, 역방향 카드의 수는 제외 번호가 되고, 카드의 기운에 따라 번호별 가중치가 정해집니다.
-          '번호 추천' 탭의 조합 필터도 함께 적용됩니다. 이번 주에 같은 카드를 뽑으면 같은 번호가 나옵니다.
-          재미로 즐겨 주세요 — 실제 당첨 확률은 어떤 번호든 같습니다.
-        </p>
       </div>
+
+      <details class="card fold" id="tarotReadingCard" hidden>
+        <summary><svg class="ic"><use href="#i-cards"/></svg>카드 해석<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div id="tarotReading" class="reading"></div>
+      </details>
     </section>
 
     <!-- ───────────── 물리 추첨기 ───────────── -->
     <section class="panel" id="tab-machine">
-      <div class="machine-layout">
-        <div class="card machine-stage">
-          <div class="drum-wrap"><canvas id="drumCanvas" role="img" aria-label="공기 혼합식 로또 추첨기 애니메이션"></canvas></div>
-          <div class="machine-status" id="machineStatus">추첨 시작을 누르면 송풍기가 켜집니다</div>
-          <div class="tray" id="tray"></div>
-          <p class="hint" id="trayHint">나온 순서대로 놓입니다</p>
+      <button class="tab sub-back" data-tab="more"><svg class="ic"><use href="#i-back"/></svg>더보기</button>
+      <div class="card machine-stage">
+        <div class="card-head">
+          <h2>물리 추첨기</h2>
+          <button class="info-btn" data-info="info-machine" data-title="물리 추첨기" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
         </div>
-
-        <div class="machine-side">
-          <div class="card">
-            <h2>물리 추첨기</h2>
-            <p class="hint">실제 로또와 같은 <b>공기 혼합식</b> 추첨기를 물리 시뮬레이션으로 재현했습니다. 45개의 공이 바닥에서 솟구치는 바람에 섞이다가, 위쪽 배출구로 빨려 올라간 순서대로 당첨 번호 6개와 보너스 번호가 정해집니다.</p>
-            <div class="machine-ctrl">
-              <span class="lbl">바람 세기</span>
-              <div class="seg" id="airSel"><button data-v="1">약</button><button data-v="2" class="active">보통</button><button data-v="3">강</button></div>
-            </div>
-            <div class="machine-ctrl">
-              <span class="lbl">진행 속도</span>
-              <div class="seg" id="speedSel"><button data-v="1" class="active">실제 속도</button><button data-v="3">3배 빠르게</button></div>
-            </div>
-            <button class="btn primary big" id="drawBtn">추첨 시작</button>
-          </div>
-
+        <div class="drum-wrap"><canvas id="drumCanvas" role="img" aria-label="공기 혼합식 로또 추첨기 애니메이션"></canvas></div>
+        <div class="machine-status" id="machineStatus">추첨 시작을 누르세요</div>
+        <div class="tray" id="tray"></div>
+        <p class="hint" id="trayHint">나온 순서대로 놓입니다</p>
+        <button class="btn primary xl" id="drawBtn">추첨 시작</button>
+        <div class="machine-ctrls">
+          <div class="machine-ctrl"><span class="lbl">바람</span><div class="seg" id="airSel"><button data-v="1">약</button><button data-v="2" class="active">보통</button><button data-v="3">강</button></div></div>
+          <div class="machine-ctrl"><span class="lbl">속도</span><div class="seg" id="speedSel"><button data-v="1" class="active">보통</button><button data-v="3">3배</button></div></div>
+        </div>
+        <div class="info-src" id="info-machine" hidden>
+          <p>실제 로또와 같은 <b>공기 혼합식</b> 추첨기를 물리 시뮬레이션으로 재현했습니다. 45개의 공이 바닥에서 솟구치는 바람에 섞이다가, 위쪽 배출구로 빨려 올라간 순서대로 당첨 번호 6개와 보너스 번호가 정해집니다.</p>
         </div>
       </div>
 
       <div class="card">
         <div class="card-head">
           <h2>이번 추첨 기록</h2>
-          <span class="hint">번호는 작은 순으로 정렬해 보여 줍니다 · 보너스 제외</span>
+          <span class="hint">작은 순 정렬 · 보너스 제외</span>
         </div>
         <div id="machineHistory" class="set-list"><p class="empty">아직 추첨하지 않았습니다.</p></div>
       </div>
     </section>
 
-    <!-- ───────────── 번호별 확률 ───────────── -->
-    <section class="panel" id="tab-stats">
-      <div class="kpis" id="kpis"></div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>출현 히트맵</h2>
-          <span class="hint">색이 진할수록 이론값(평균) 대비 많이 나온 번호</span>
-        </div>
-        <div class="heat" id="heat"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>번호별 출현 횟수</h2>
-          <span class="hint">점선 = 이론 기대값</span>
-        </div>
-        <div class="chart" id="chart"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>번호별 상세 확률표</h2>
-          <span class="hint">머리글을 누르면 정렬됩니다</span>
-        </div>
-        <div class="table-wrap">
-          <table class="stats-table" id="statsTable"></table>
-        </div>
-        <p class="note">
-          <b>읽는 법</b> · <b>출현률</b>은 과거 회차 중 그 번호가 나온 비율, <b>이론 대비</b>는 완전 무작위일 때 기대 횟수 대비 비율(100% = 평균),
-          <b>추천 확률</b>은 '번호 추천' 탭의 현재 설정으로 생성기가 그 번호를 고를 확률입니다.
-          실제 추첨에서 각 번호가 뽑힐 확률은 과거와 무관하게 항상 6/45 = 13.33%이며, 1등 확률은 조합당 1/8,145,060입니다.
-        </p>
-      </div>
-    </section>
-
     <!-- ───────────── 1등 당첨금 ───────────── -->
     <section class="panel" id="tab-prize">
+      <button class="tab sub-back" data-tab="more"><svg class="ic"><use href="#i-back"/></svg>더보기</button>
       <div class="kpis" id="prKpis"></div>
 
       <div class="card">
         <div class="card-head">
-          <h2>연도별 평균 1등 당첨금 (1인)</h2>
-          <span class="hint">1등이 나온 회차 기준 · 막대에 마우스를 올리면 자세히</span>
+          <h2>연도별 평균 1등 당첨금</h2>
+          <button class="info-btn" data-info="info-prize" data-title="1등 당첨금" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
         </div>
         <div class="chart viz" id="prYears"></div>
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <h2>최근 52회 1등 당첨금 (1인)</h2>
-          <span class="hint">빈 칸은 1등이 없어 이월된 회차</span>
-        </div>
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-chart"/></svg>최근 52회 1등 당첨금<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <p class="hint">빈 칸 = 1등이 없어 이월된 회차</p>
         <div class="chart viz" id="prRecent"></div>
-      </div>
+      </details>
 
-      <div class="card">
-        <div class="card-head">
-          <h2>역대 1등 당첨금</h2>
-          <span class="hint">머리글을 누르면 정렬됩니다 · 금액은 세전</span>
-        </div>
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-grid"/></svg>역대 1등 당첨금 표<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="fold-tools"><span class="hint">제목을 누르면 정렬 · 세전</span></div>
         <div class="table-wrap"><table class="stats-table" id="prTable"></table></div>
-        <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="prMore">더 보기</button></div>
-        <p class="note">출처: 동행복권 회차별 당첨 결과(smok95/lotto 공개 데이터). 1등 당첨금은 세전 금액이며, 실수령액은 3억 원 초과분 33%·이하 22% 세금을 뺀 금액입니다.</p>
-      </div>
-    </section>
-
-    <!-- ───────────── 내 번호 확인 ───────────── -->
-    <section class="panel" id="tab-check">
-      <div class="card">
-        <h2>내 번호를 과거 전 회차에 대입하기</h2>
-        <p class="hint">번호 6개를 고르세요.</p>
-        <div class="picker" id="checkPicker"></div>
-        <div class="gen-row">
-          <div class="balls" id="checkSel"></div>
-          <button class="btn ghost sm" id="checkReset">초기화</button>
-        </div>
-        <div id="checkResult"></div>
+        <div class="more-row"><button class="btn ghost" id="prMore">더 보기</button></div>
+      </details>
+      <div class="info-src" id="info-prize" hidden>
+        <p>1등이 나온 회차 기준 1인 당첨금(세전)입니다. 막대를 누르거나 마우스를 올리면 자세히 보입니다.</p>
+        <p>실수령액은 3억 원 초과분 33%, 이하 22% 세금을 뺀 금액입니다.</p>
+        <p>출처: 동행복권 회차별 당첨 결과(smok95/lotto 공개 데이터)</p>
       </div>
     </section>
 
@@ -347,74 +410,82 @@
     <footer class="foot">
       통계는 재미와 참고용입니다. 로또는 매 회 독립적인 무작위 추첨이므로 과거 데이터로 당첨을 예측할 수 없습니다. <a href="privacy.html">개인정보처리방침</a>
     </footer>
+
+    <!-- ───────────── 아래 메뉴 (휴대폰 엄지 위치) ───────────── -->
+    <nav class="bnav" aria-label="주 메뉴">
+      <button class="tab active is-on" data-tab="recommend"><svg class="ic"><use href="#i-spark"/></svg><span>추천</span></button>
+      <button class="tab" data-tab="stats"><svg class="ic"><use href="#i-chart"/></svg><span>분석</span></button>
+      <button class="tab" data-tab="check"><svg class="ic"><use href="#i-ticket"/></svg><span>내 번호</span></button>
+      <button class="tab" data-tab="more"><svg class="ic"><use href="#i-grid"/></svg><span>더보기</span></button>
+    </nav>
   </div>
 
+  <!-- ═════════════ 스피또 ═════════════ -->
   <div class="app" id="app-speetto">
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="sp-status" role="tab">발행 현황</button>
-      <button class="tab" data-tab="sp-sim" role="tab">시뮬레이터</button>
+      <button class="tab" data-tab="sp-sim" role="tab">긁어 보기</button>
     </nav>
 
-    <!-- ───────────── 스피또: 발행 현황 ───────────── -->
     <section class="panel active" id="tab-sp-status">
       <div class="card">
         <div class="card-head">
           <h2>스피또 발행 현황</h2>
           <div class="sp-head-r">
-            <span class="hint" id="spStatusInfo">불러오는 중…</span>
-            <button class="btn ghost sm" id="spRefresh">새로고침</button>
+            <button class="icon-btn bordered" id="spRefresh" aria-label="새로고침"><svg class="ic"><use href="#i-refresh"/></svg></button>
+            <button class="info-btn" data-info="info-sp" data-title="발행 현황 읽는 법" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
           </div>
         </div>
+        <p class="hint" id="spStatusInfo">불러오는 중…</p>
         <div class="sp-status" id="spStatus"></div>
-        <p class="note">
-          <b>입고율</b>은 해당 회차 발행 매수 중 판매점에 공급(출고)된 비율, <b>잔여</b>는 아직 주인을 찾지 않은 당첨 복권 수,
-          <b>당첨</b>은 발행 매수 − 잔여 입니다. <b>필요 금액</b>은 지금 1장 살 때의 추정 확률로 계산한 '평균적으로 한 번 당첨되기까지 사야 하는 금액'입니다.
-          추정 방법: 발행 매수(1등 1매당 500만 매, 스피또500은 400만 매) 중 판매된 비율을 3등 당첨 비율로 추정(입고율 이내)하고,
-          남은 잔여 당첨권이 아직 팔리지 않은 복권에 고르게 섞여 있다고 가정합니다. 3등은 판매 추정의 기준이라 공식 확률과 같게 나옵니다.
-          출처: 동행복권 즉석식 복권 발행내역.
-        </p>
+        <div class="info-src" id="info-sp" hidden>
+          <p><b>입고율</b> — 해당 회차 발행 매수 중 판매점에 공급(출고)된 비율</p>
+          <p><b>잔여</b> — 아직 주인을 찾지 않은 당첨 복권 수 · <b>당첨</b> = 발행 매수 − 잔여</p>
+          <p><b>필요 금액</b> — 지금 1장 살 때의 추정 확률로 계산한 ‘평균적으로 한 번 당첨되기까지 사야 하는 금액’</p>
+          <p>추정 방법: 발행 매수(1등 1매당 500만 매, 스피또500은 400만 매) 중 판매된 비율을 3등 당첨 비율로 추정(입고율 이내)하고, 남은 잔여 당첨권이 아직 팔리지 않은 복권에 고르게 섞여 있다고 가정합니다. 3등은 판매 추정의 기준이라 공식 확률과 같게 나옵니다.</p>
+          <p>출처: 동행복권 즉석식 복권 발행내역</p>
+        </div>
       </div>
-
     </section>
 
-    <!-- ───────────── 스피또: 시뮬레이터 ───────────── -->
     <section class="panel" id="tab-sp-sim">
-      <div class="sp-layout" style="margin-top:0">
-        <div class="card">
-          <div class="card-head">
-            <h2>스피또 시뮬레이터</h2>
-            <div class="seg" id="spGameSel">
-              <button data-g="SP1000">스피또1000</button><button data-g="SP2000" class="active">스피또2000</button><button data-g="SP500">스피또500</button>
-            </div>
-          </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>스피또 긁어 보기</h2>
+          <button class="info-btn" data-info="info-spsim" data-title="시뮬레이터" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
+        <div class="seg seg-full" id="spGameSel">
+          <button data-g="SP1000">1000</button><button data-g="SP2000" class="active">2000</button><button data-g="SP500">500</button>
+        </div>
+        <div class="ticket-wrap" id="ticketWrap"></div>
+        <div class="sp-actions">
+          <button class="btn primary xl" id="spBuy">1장 사서 긁기</button>
+          <button class="btn ghost" id="spReveal">한 번에 긁기</button>
+        </div>
+        <div class="sp-session" id="spSession"></div>
+        <details class="fold sub-fold">
+          <summary><svg class="ic"><use href="#i-sliders"/></svg>확률 기준<svg class="ic chev"><use href="#i-down"/></svg></summary>
           <div class="sp-mode">
-            <span class="lbl">확률 기준</span>
-            <div class="seg" id="spModeSel"><button data-m="base" class="active">공식 당첨 구조</button><button data-m="live">현재 회차 잔여 반영</button></div>
+            <div class="seg" id="spModeSel"><button data-m="base" class="active">공식 구조</button><button data-m="live">잔여 반영</button></div>
             <select id="spRoundSel" hidden aria-label="회차 선택"></select>
           </div>
           <p class="hint sp-mode-info" id="spModeInfo"></p>
-          <div class="ticket-wrap" id="ticketWrap"></div>
-          <div class="sp-actions">
-            <button class="btn primary" id="spBuy">1장 사서 긁기</button>
-            <button class="btn ghost" id="spReveal">한 번에 긁기</button>
-          </div>
-          <div class="sp-session" id="spSession"></div>
-          <p class="note">카드 그림과 게임 방식은 화면용으로 단순화한 것이며 실제 복권과 다릅니다. 당첨 확률만 공식 당첨 구조와 같습니다.</p>
-        </div>
-
-        <div class="card">
-          <h2>한 번에 많이 사 보기</h2>
-          <div class="sp-bulk-ctrl">
-            <div class="seg" id="spBulkN">
-              <button data-n="10">10장</button><button data-n="100" class="active">100장</button><button data-n="1000">1천장</button><button data-n="10000">1만장</button><button data-n="100000">10만장</button>
-            </div>
-            <button class="btn primary" id="spBulkGo">시뮬레이션</button>
-            <button class="btn ghost" id="spUntil">1등 나올 때까지</button>
-          </div>
-          <div id="spBulkResult"></div>
-          <div id="spStructure"></div>
-        </div>
+        </details>
+        <div class="info-src" id="info-spsim" hidden><p>카드 그림과 게임 방식은 화면용으로 단순화한 것이며 실제 복권과 다릅니다. 당첨 확률만 공식 당첨 구조와 같습니다.</p></div>
       </div>
+
+      <details class="card fold">
+        <summary><svg class="ic"><use href="#i-chart"/></svg>한 번에 많이 사 보기<svg class="ic chev"><use href="#i-down"/></svg></summary>
+        <div class="sp-bulk-ctrl">
+          <div class="seg" id="spBulkN">
+            <button data-n="10">10</button><button data-n="100" class="active">100</button><button data-n="1000">1천</button><button data-n="10000">1만</button><button data-n="100000">10만</button>
+          </div>
+          <button class="btn primary" id="spBulkGo">사 보기</button>
+          <button class="btn ghost" id="spUntil">1등 나올 때까지</button>
+        </div>
+        <div id="spBulkResult"></div>
+        <div id="spStructure"></div>
+      </details>
     </section>
 
     <div class="ad-slot" data-ad="speetto"></div>
@@ -423,42 +494,50 @@
       스피또 시뮬레이터는 재미와 참고용입니다. 즉석 복권의 기대 환급률은 약 56~60%로, 평균적으로 산 금액의 40% 이상은 돌아오지 않습니다. <a href="privacy.html">개인정보처리방침</a>
     </footer>
   </div>
+
+  <!-- ═════════════ 운세 ═════════════ -->
   <div class="app" id="app-fortune">
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="saju" role="tab">사주팔자</button>
       <button class="tab" data-tab="today" role="tab">오늘의 운세</button>
     </nav>
 
-    <!-- ───────────── 운세: 사주팔자 ───────────── -->
     <section class="panel active" id="tab-saju">
       <div class="card">
-        <h2>생년월일시 입력</h2>
+        <div class="card-head">
+          <h2>생년월일시 입력</h2>
+          <button class="info-btn" data-info="info-saju" data-title="입력 안내" aria-label="설명"><svg class="ic"><use href="#i-info"/></svg></button>
+        </div>
         <form class="sj-form" id="sjForm" autocomplete="off">
           <div class="sj-field">
             <span class="lbl">성별</span>
-            <div class="seg" id="sjGender"><button type="button" data-g="M" class="active">남자</button><button type="button" data-g="F">여자</button></div>
+            <div class="seg seg-full" id="sjGender"><button type="button" data-g="M" class="active">남자</button><button type="button" data-g="F">여자</button></div>
           </div>
           <label class="sj-field"><span class="lbl">생년월일 (양력)</span><input type="date" id="sjDate" min="1900-01-01" max="2050-12-31" required></label>
           <div class="sj-field">
             <span class="lbl">태어난 시각</span>
-            <div class="sj-row"><input type="time" id="sjTime" value="12:00"><label class="check"><input type="checkbox" id="sjTimeUnknown"> 모름</label></div>
+            <div class="sj-row"><input type="time" id="sjTime" value="12:00" aria-label="태어난 시각"><label class="check"><input type="checkbox" id="sjTimeUnknown"> 모름</label></div>
           </div>
-          <label class="sj-field"><span class="lbl">태어난 지역 (경도 보정)</span><select id="sjCity"></select></label>
-          <label class="sj-field"><span class="lbl">자시 기준</span>
-            <select id="sjZasi"><option value="early">23시에 날짜가 바뀜 (일반)</option><option value="late">0시에 날짜가 바뀜 (야자시)</option></select>
-          </label>
+          <details class="fold sub-fold sj-adv">
+            <summary><svg class="ic"><use href="#i-sliders"/></svg>지역 · 자시 기준<svg class="ic chev"><use href="#i-down"/></svg></summary>
+            <label class="sj-field"><span class="lbl">태어난 지역</span><select id="sjCity"></select></label>
+            <label class="sj-field"><span class="lbl">자시 기준</span>
+              <select id="sjZasi"><option value="early">23시에 날짜가 바뀜 (일반)</option><option value="late">0시에 날짜가 바뀜 (야자시)</option></select>
+            </label>
+          </details>
           <div class="sj-field sj-submit">
-            <label class="check"><input type="checkbox" id="sjRemember" checked> 이 기기에 기억하기</label>
-            <button class="btn primary" type="submit">사주 보기</button>
+            <label class="check"><input type="checkbox" id="sjRemember" checked> 이 기기에 기억</label>
+            <button class="btn primary xl" type="submit">사주 보기</button>
           </div>
         </form>
-        <p class="note">양력 생일로 입력하세요. 태어난 시각은 당시 한국 공식 시각 그대로 넣으면 과거 서머타임·표준시 변경이 자동 반영되고, 태어난 지역의 경도로 실제 태양시를 보정합니다(서울 약 −32분).
-          입력한 정보는 이 기기 안에서만 계산하며 어디로도 보내지 않습니다.</p>
+        <div class="info-src" id="info-saju" hidden>
+          <p>양력 생일로 입력하세요. 태어난 시각은 당시 한국 공식 시각 그대로 넣으면 과거 서머타임·표준시 변경이 자동 반영되고, 태어난 지역의 경도로 실제 태양시를 보정합니다(서울 약 −32분).</p>
+          <p>입력한 정보는 이 기기 안에서만 계산하며 어디로도 보내지 않습니다.</p>
+        </div>
       </div>
       <div id="sjResult"></div>
     </section>
 
-    <!-- ───────────── 운세: 오늘의 운세 ───────────── -->
     <section class="panel" id="tab-today">
       <div id="todayResult"></div>
     </section>
@@ -471,7 +550,64 @@
   </div>
   </main>
 
-  <div class="toast" id="toast"></div>
+  <!-- ───────────── 메뉴 (오른쪽 위 ☰) ───────────── -->
+  <dialog class="sheet" id="menuSheet" aria-label="메뉴">
+    <div class="sheet-head"><b>메뉴</b><button class="icon-btn" data-close aria-label="닫기"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="menu-apps">
+        <button class="menu-row app-btn" data-app="lotto"><svg class="ic"><use href="#i-ball"/></svg>로또 번호 분석기</button>
+        <button class="menu-row app-btn" data-app="speetto"><svg class="ic"><use href="#i-scratch"/></svg>스피또</button>
+        <button class="menu-row app-btn" data-app="fortune"><svg class="ic"><use href="#i-yin"/></svg>운세</button>
+      </div>
+      <h3 class="sheet-h">화면 밝기</h3>
+      <div class="seg seg-full" id="themeSel">
+        <button data-t="auto"><svg class="ic"><use href="#i-refresh"/></svg>자동</button><button data-t="light"><svg class="ic"><use href="#i-sun"/></svg>밝게</button><button data-t="dark"><svg class="ic"><use href="#i-moon"/></svg>어둡게</button>
+      </div>
+      <h3 class="sheet-h">당첨 번호 데이터</h3>
+      <p class="hint" id="dataInfo">데이터를 불러오는 중…</p>
+      <div class="menu-data">
+        <button class="btn ghost" id="updateBtn"><svg class="ic"><use href="#i-refresh"/></svg><span>최신 회차 확인</span></button>
+        <label class="btn ghost file-btn"><svg class="ic"><use href="#i-upload"/></svg>파일 불러오기
+          <input type="file" id="fileInput" accept=".json,.csv" hidden>
+        </label>
+      </div>
+      <p class="sheet-note"><a href="privacy.html">개인정보처리방침</a></p>
+    </div>
+  </dialog>
+
+  <!-- ───────────── 분석 기준 ───────────── -->
+  <dialog class="sheet" id="rangeSheet" aria-label="분석 기준">
+    <div class="sheet-head"><b>분석 기준</b><button class="icon-btn" data-close aria-label="닫기"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <label class="field">몇 회차를 볼까요?
+        <select id="rangeSel">
+          <option value="0">전체 회차</option>
+          <option value="500">최근 500회</option>
+          <option value="300">최근 300회</option>
+          <option value="100">최근 100회</option>
+          <option value="50">최근 50회</option>
+        </select>
+      </label>
+      <label class="field">‘최근 흐름’ 기준
+        <select id="recentSel">
+          <option value="10">최근 10회</option>
+          <option value="20" selected>최근 20회</option>
+          <option value="50">최근 50회</option>
+          <option value="100">최근 100회</option>
+        </select>
+      </label>
+      <p class="hint" id="rangeHint"></p>
+      <button class="btn primary xl" data-close>확인</button>
+    </div>
+  </dialog>
+
+  <!-- ───────────── ⓘ 설명 창 ───────────── -->
+  <dialog class="sheet" id="infoSheet">
+    <div class="sheet-head"><b id="infoTitle">설명</b><button class="icon-btn" data-close aria-label="닫기"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body" id="infoBody"></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="data/lotto_data.js"></script>
   <script src="js/data.js"></script>
@@ -484,6 +620,7 @@
   <script src="js/jackpot.js"></script>
   <script src="js/saju.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/ui.js"></script>
   <script src="js/ads.js"></script>
 </body>
 </html>
