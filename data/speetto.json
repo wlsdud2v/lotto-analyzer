@@ -1,6 +1,6 @@
 {
  "source": "https://www.dhlottery.co.kr/st/pblcnDsctn",
- "fetched_at": "2026-11-24T13:56:48.469Z",
+ "fetched_at": "2026-11-25T08:49:57.910Z",
  "games": {
   "SP1000": [
    {
@@ -59,7 +59,7 @@
     "shipRate": 92,
     "price": 1000,
     "rank1": {
-     "left": 1,
+     "left": 0,
      "total": 12
     },
     "rank2": {
